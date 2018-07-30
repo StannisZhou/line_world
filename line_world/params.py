@@ -46,8 +46,8 @@ def generate_latent_templates(n_channels, kernel_size):
     coords_y = np.tile(coords_y, n_channels**n_parts)
     channel_indices = np.stack([
         np.array(x) for x in itertools.product(np.arange(n_channels, dtype=int), repeat=n_parts)
-    ]).flatten()
-    coords_channel = np.tile(channel_indices, int(location_indices.size / n_parts))
+    ])
+    coords_channel = np.repeat(channel_indices, int(location_indices.size / n_parts), axis=0).flatten()
     n_templates = int(scipy.special.comb(kernel_size**2, n_parts) * n_channels**n_parts)
     coords_templates = np.repeat(
         np.arange(n_templates, dtype=int), n_parts

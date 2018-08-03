@@ -45,8 +45,8 @@ class Layer(Component):
             params['n_templates'] = 1
 
         params['brick_self_rooting_prob'] = torch.cat((
-            torch.tensor([params['self_rooting_prob']]),
-            (1 - params['self_rooting_prob']) * torch.ones(params['n_templates']) / params['n_templates']
+            torch.tensor([1 - params['self_rooting_prob']]),
+            params['self_rooting_prob'] * torch.ones(params['n_templates']) / params['n_templates']
         ))
         params['brick_parent_prob'] = torch.cat((
             torch.zeros(1), torch.ones(params['n_templates']) / params['n_templates']
@@ -136,7 +136,6 @@ class Layer(Component):
         ) + calc_log_prob(
             state, torch.unsqueeze((1 - no_parents_prob), -1) * self.params['brick_parent_prob']
         )
-        log_prob = torch.sum(log_prob)
         return log_prob
 
     def get_no_parents_prob(self, state):
@@ -219,11 +218,11 @@ class Layer(Component):
         """
         self._validate_no_parents_prob(no_parents_prob, True)
         prob = torch.zeros(self.state_shape)
-        if torch.sum(no_parents_prob == 0) > 0:
-            prob[no_parents_prob == 0] = self.params['brick_self_rooting_prob']
-
         if torch.sum(no_parents_prob == 1) > 0:
-            prob[no_parents_prob == 1] = self.params['brick_parent_prob']
+            prob[no_parents_prob == 1] = self.params['brick_self_rooting_prob']
+
+        if torch.sum(no_parents_prob == 0) > 0:
+            prob[no_parents_prob == 0] = self.params['brick_parent_prob']
 
         sample = fast_sample_from_categorical_distribution(prob)
         return sample
@@ -267,13 +266,14 @@ class Layer(Component):
         -------
 
         """
-        if not torch.sum(torch.sum(state, dim=3) == 1) == self.n_bricks:
+        if not np.allclose(torch.sum(state, dim=3).detach().numpy(), 1):
             exp_state = torch.exp(state)
             state = exp_state / torch.sum(
-                exp_state, dim=3, keepdims=True
+                exp_state, dim=3, keepdim=True
             )
 
         assert state.size() == self.state_shape
+        assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
         return state
 
     def _expand_templates(self):
@@ -342,7 +342,7 @@ def fast_sample_from_categorical_distribution(prob):
     return sample
 
 
-def calc_log_prob(prob, state):
+def calc_log_prob(state, prob):
     state = state[prob > 0]
     prob = prob[prob > 0]
     return torch.sum(state * torch.log(prob))

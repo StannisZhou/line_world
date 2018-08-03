@@ -37,7 +37,7 @@ def get_n_cycles_three_layers(state_list, layer_list):
 
 def draw_samples_markov_backbone(layer_list):
     layer_sample_list = []
-    no_parents_prob = torch.zeros(layer_list[0].shape)
+    no_parents_prob = torch.ones(layer_list[0].shape)
     for layer in layer_list[:-1]:
         layer_sample = layer.draw_sample(no_parents_prob)
         no_parents_prob = layer.get_no_parents_prob(layer_sample)

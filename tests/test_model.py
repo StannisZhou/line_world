@@ -17,11 +17,12 @@ def simple_model():
     thickness = 1
     length = 3
     n_rotations = 10
+    n_parts = 3
 
     # Initialize the CyclesMachine
     layer_params_list = generate_cycles_machine_layer_params(
         n_layers, n_channels_list, d_image, kernel_size_list, stride_list, self_rooting_prob_list,
-        thickness, length, n_rotations
+        thickness, length, n_rotations, n_parts
     )
     cycles_machine = CyclesMachine({'layer_params_list': layer_params_list})
     return cycles_machine

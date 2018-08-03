@@ -10,7 +10,7 @@ def test_latent_templates():
     n_channels = 3
     kernel_size = 3
     n_parts = 3
-    latent_templates = generate_latent_templates(n_channels, kernel_size).to_dense()
+    latent_templates = generate_latent_templates(n_channels, kernel_size, n_parts).to_dense()
     n_templates = latent_templates.size(0)
     assert n_templates == int(scipy.special.comb(kernel_size**2, n_parts) * n_channels**n_parts)
     assert np.allclose(torch.sum(latent_templates.reshape((n_templates, -1)), dim=1).numpy(), n_parts)

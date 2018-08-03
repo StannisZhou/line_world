@@ -7,7 +7,7 @@ import torch
 import sparse
 
 
-def generate_latent_templates(n_channels, kernel_size):
+def generate_latent_templates(n_channels, kernel_size, n_parts):
     """generate_templates
     Automatically generate the templates in COO sparse multidimensional array format for a particular number
     of channels and a particular kernel size.
@@ -16,7 +16,7 @@ def generate_latent_templates(n_channels, kernel_size):
     The way we are going to generate the templates is, we are going to first sample three points, without
     replacement, on one channel, and then we are going to vary the channel number at each one of the three points,
     to get the various other templates.
-    The total number of templates would be n_templates = choose(kernel_size**2, 3) * n_channels**3
+    The total number of templates would be n_templates = choose(kernel_size**2, n_parts) * n_channels**n_parts
 
     Parameters
     ----------
@@ -25,6 +25,8 @@ def generate_latent_templates(n_channels, kernel_size):
         n_channels is the number of channels for the templates
     kernel_size : int
         kernel_size is the kernel size for the templates
+    n_parts : int
+        The number of parts we have in a particular object
 
     Returns
     -------
@@ -33,7 +35,6 @@ def generate_latent_templates(n_channels, kernel_size):
         templates is a sparse COO multidimensional array of shape (n_templates, n_channels, kernel_size, kernel_size)
 
     """
-    n_parts = 3
     coords_x, coords_y = np.meshgrid(np.arange(kernel_size, dtype=int), np.arange(kernel_size, dtype=int), indexing='ij')
     coords_x = coords_x.flatten()
     coords_y = coords_y.flatten()
@@ -155,7 +156,7 @@ def get_latent_layer_grid_size_list(n_layers, d_image, kernel_size_list, stride_
 
 
 def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, kernel_size_list, stride_list,
-                                    self_rooting_prob_list, thickness, length, n_rotations):
+                                    self_rooting_prob_list, thickness, length, n_rotations, n_parts):
     """generate_cycles_machine_layer_params
     Build the list of parameters for the different layers in the CyclesMachine.
 
@@ -185,6 +186,8 @@ def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, ker
     n_rotations : int
         n_rotations is the number of rotations we are going to apply to the linelet prototypes for
         the image templates
+    n_parts : int
+        The number of parts we have in a particular object
 
     Returns
     -------
@@ -195,7 +198,7 @@ def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, ker
     """
     grid_size_list = get_latent_layer_grid_size_list(n_layers, d_image, kernel_size_list, stride_list)
     templates_list = [
-        generate_latent_templates(n_channels_list[ii], kernel_size_list[ii]) for ii in range(n_layers - 2)
+        generate_latent_templates(n_channels_list[ii], kernel_size_list[ii], n_parts) for ii in range(n_layers - 2)
     ]
     templates_list.append(generate_image_templates(kernel_size_list[-1], thickness, length, n_rotations))
     layer_params_list = [

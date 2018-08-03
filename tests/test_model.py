@@ -4,6 +4,28 @@ from line_world.params import generate_cycles_machine_layer_params
 from line_world.perturbation import draw_samples_markov_backbone
 import pytest
 
+@pytest.fixture
+def toy_model():
+    # Set basic parameters
+    n_layers = 3
+    n_channels_list = np.ones(n_layers - 1, dtype=int)
+    d_image = 8
+    kernel_size_list = np.array([3, 4], dtype=int)
+    stride_list = 2 * np.ones(n_layers - 1, dtype=int)
+    self_rooting_prob_list = np.array([1.0, 0, 0])
+    thickness = 2
+    length = 3
+    n_rotations = 10
+    n_parts = 3
+
+    # Initialize the CyclesMachine
+    layer_params_list = generate_cycles_machine_layer_params(
+        n_layers, n_channels_list, d_image, kernel_size_list, stride_list, self_rooting_prob_list,
+        thickness, length, n_rotations, n_parts
+    )
+    cycles_machine = CyclesMachine({'layer_params_list': layer_params_list})
+    return cycles_machine
+
 
 @pytest.fixture
 def simple_model():

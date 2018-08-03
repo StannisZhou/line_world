@@ -138,7 +138,7 @@ class Layer(Component):
         )
         return log_prob
 
-    def get_no_parents_prob(self, state):
+    def get_no_parents_prob(self, state, aggregate=True):
         """get_no_parents_prob
         Get the no_parents_prob array of the next layer
 
@@ -148,14 +148,21 @@ class Layer(Component):
         state : torch.Tensor
             state is a tensor of shape self.state_shape, which contains the state for which we
             want to get the no_parents_prob array for the next layer
+        aggregate : bool
+            aggregate indicates whether we want to aggregate the connectivity information across
+            all the bricks in this layer. Defaults to be true.
 
         Returns
         -------
 
         no_parents_prob : torch.Tensor
-            no_parents_prob is a tensor of shape (n_channels_next_layer, grid_size_next_layer, grid_size_next_layer),
-            i.e. it has the same shape as the bricks in the next layer. Each component contains the information going
+            When aggregate is true, no_parents_prob is a tensor of shape
+            (n_channels_next_layer, grid_size_next_layer, grid_size_next_layer), i.e. it has the
+            same shape as the bricks in the next layer. Each component contains the information going
             to the next layer in terms of the probability that there's no parents pointing to the corresponding brick
+            When aggregate is False, no_parents_prob is a tensor of shape
+            (n_channels, grid_size, grid_size, n_channels_next_layer, grid_size_next_layer, grid_size_next_layer),
+            and gives us the connectivity information between the two layers.
 
         """
         state = self._normalize_state(state)
@@ -164,12 +171,13 @@ class Layer(Component):
                 self.n_channels, self.grid_size, self.grid_size, self.n_templates + 1, 1, 1, 1
             ) * (1 - self.expanded_templates.to_dense().float()), dim=3
         )
-        no_parents_prob = torch.prod(
-            no_parents_prob.view(
-                self.n_bricks, self.params['n_channels_next_layer'],
-                self.params['grid_size_next_layer'], self.params['grid_size_next_layer']
-            ), dim=0
-        )
+        if aggregate:
+            no_parents_prob = torch.prod(
+                no_parents_prob.view(
+                    self.n_bricks, self.params['n_channels_next_layer'],
+                    self.params['grid_size_next_layer'], self.params['grid_size_next_layer']
+                ), dim=0
+            )
         return no_parents_prob
 
     def get_on_bricks_prob(self, state):

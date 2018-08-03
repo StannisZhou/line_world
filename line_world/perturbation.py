@@ -136,7 +136,7 @@ def create_cycles_perturbation(implementation, layer_list, n_samples, params):
 
 class CyclesPerturbation(object):
     def __init__(self, layer_list, n_samples):
-        self.layer_list = layer_lists
+        self.layer_list = layer_list
         logging.info('Getting samples for the null distribution on the number of cycles')
         state_list_samples = [
             draw_samples_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
@@ -162,7 +162,26 @@ class ToyPerturbation(CyclesPerturbation):
         assert len(layer_list) == 3
         assert layer_list[0].shape == torch.Size([1, 1, 1])
         super().__init__(layer_list, n_samples)
+        self.null_distribution = self._get_null_distribution()
+        assert [key in params for key in ['perturbed_distribution', 'sigma']]
         self.params = params
 
     def get_log_prob_cycles_perturbation(self, state_list):
-        return 0
+        sigma = self.params['sigma']
+        n_cycles = get_n_cycles_three_layers(state_list, self.layer_list)
+        null_prob = torch.sum(
+            self.null_distribution * torch.exp(
+                -(torch.arange(self.null_distribution.numel()) - n_cycles)**2 / (2 * sigma**2)
+            )
+        )
+        perturbed_prob = torch.sum(
+            self.params['perturbed_distribution'] * torch.exp(
+                -(torch.arange(self.null_distribution.numel()) - n_cycles)**2 / (2 * sigma**2)
+            )
+        )
+        return torch.log(perturbed_prob) - torch.log(null_prob)
+
+    def _get_null_distribution(self):
+        n_cycles_list = np.array([x[0, 0, 0].item() for x in self.n_cycles_statistics])
+        null_distribution = np.bincount(n_cycles_list) / len(n_cycles_list)
+        return torch.tensor(null_distribution)

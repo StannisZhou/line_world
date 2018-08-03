@@ -71,8 +71,9 @@ class CyclesMachine(Component):
 
         assert flag
 
-        log_prob = self.get_energy(state_list)
-        log_prob.backward()
+        loss = -self.get_energy(state_list)
+        loss.backward()
+        return -loss.item()
 
 
 def log_prob_markov_backbone(state_list, layer_list):

@@ -53,7 +53,7 @@ def test_log_prob(simple_model):
         layer_sample = layer_sample_list[ll]
         on_bricks_prob = layer.get_on_bricks_prob(layer_sample)
         assert np.all(on_bricks_prob[no_parents_prob == 0].numpy() == 1)
-        log_prob = layer.get_log_prob(layer_sample, no_parents_prob).item()
+        log_prob = layer.get_log_prob(layer_sample, no_parents_prob, 0).item()
         if ll < len(simple_model.layer_list) - 1:
             n_templates = layer.params['templates'].shape[0]
         else:

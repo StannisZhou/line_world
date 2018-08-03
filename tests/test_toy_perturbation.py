@@ -1,5 +1,5 @@
 import numpy as np
-from line_world.cycles_machine import CyclesMachine
+from line_world.cycles_machine import CyclesMachine, log_prob_markov_backbone
 from line_world.params import generate_cycles_machine_layer_params
 from line_world.perturbation import draw_samples_markov_backbone
 import pytest
@@ -46,3 +46,30 @@ def test_perturbation(toy_model):
         layer_sample.requires_grad_()
 
     toy_model.evaluate_energy_gradients(layer_sample_list)
+
+
+def test_log_prob_markov_backbone(toy_model):
+    image = torch.zeros(toy_model.layer_list[2].state_shape)
+    for ii in range(4):
+        for jj in range(4):
+            if ii == jj:
+                image[0, ii, jj, 1] = 1
+            else:
+                image[0, ii, jj, 0] = 1
+
+    optimal_top_layer = torch.zeros(toy_model.layer_list[0].state_shape)
+    optimal_top_layer[0, 0, 0, 3] = 1
+    optimal_middle_layer = torch.zeros(toy_model.layer_list[1].state_shape)
+    optimal_middle_layer[0, 0, 0, 8] = 1
+    optimal_middle_layer[0, 0, 1, 0] = 1
+    optimal_middle_layer[0, 1, 0, 0] = 1
+    optimal_middle_layer[0, 1, 1, 8] = 1
+    optimal_state_list = [
+        optimal_top_layer,
+        optimal_middle_layer,
+        image
+    ]
+    log_prob = log_prob_markov_backbone(optimal_state_list, toy_model.layer_list, 0).item()
+    expected_prob = 0.5 * (1 / 6) * 0.9**2 * (1 / 8)**2 * 0.99**12
+    expected_log_prob = np.log(expected_prob)
+    assert np.isclose(log_prob, expected_log_prob)

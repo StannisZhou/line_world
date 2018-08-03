@@ -47,7 +47,7 @@ class DataGenerator(Component):
         prototype_list = []
         ii = 0
         while len(prototype_list) < n_lines:
-            prototype = get_rotated_prototype(self.params['thickness'], length_list[ii], angle_list[ii])
+            prototype = get_rotated_prototype(self.params['thickness'], length_list[ii], angle_list[ii], 1)
             n_rows, n_cols = prototype.shape
             if n_rows <= self.params['grid_size'] and n_cols <= self.params['grid_size']:
                 prototype_list.append(prototype)
@@ -87,12 +87,12 @@ def remove_zero_padding(prototype):
     return prototype
 
 
-def get_rotated_prototype(thickness, length, angle):
+def get_rotated_prototype(thickness, length, angle, order):
     prototype = np.zeros((length, length), dtype=int)
     top_index = int(np.floor(length / 2) - np.floor(thickness / 2))
     bottom_index = top_index + thickness
     prototype[top_index:bottom_index] = 1
-    prototype = rotate(prototype, angle=angle, resize=True, order=1, preserve_range=True)
+    prototype = rotate(prototype, angle=angle, order=order, preserve_range=True)
     prototype[prototype > 0] = 1
     prototype = remove_zero_padding(prototype)
     return prototype

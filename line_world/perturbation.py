@@ -1,7 +1,7 @@
-from line_world.utils import ParamsProc, Component
 from tqdm import tqdm
 import torch
 import logging
+import numpy as np
 
 
 def get_n_cycles(state_list, layer_list):
@@ -159,11 +159,32 @@ class MarkovBackbone(CyclesPerturbation):
 
 class ToyPerturbation(CyclesPerturbation):
     def __init__(self, layer_list, n_samples, params):
+        """__init__
+
+        Parameters
+        ----------
+
+        layer_list : list
+            layer_list is a list of Layer objects
+        n_samples : int
+            n_samples is the number of samples we are going to use to estimate the null distribution
+        params : dict
+            params is a dictionary containing the relevant parameters
+            params['perturbation_distribution'] : torch.Tensor
+                A torch tensor containing the perturbed distribution on the number of cycles
+            params['sigma'] : float
+                The standard deviation we are going to use in the continuous interpolation of the cycles distribution
+
+        Returns
+        -------
+
+        """
         assert len(layer_list) == 3
         assert layer_list[0].shape == torch.Size([1, 1, 1])
         super().__init__(layer_list, n_samples)
         self.null_distribution = self._get_null_distribution()
         assert [key in params for key in ['perturbed_distribution', 'sigma']]
+        assert torch.sum(params['perturbed_distribution']) == 1
         self.params = params
 
     def get_log_prob_cycles_perturbation(self, state_list):
@@ -171,17 +192,17 @@ class ToyPerturbation(CyclesPerturbation):
         n_cycles = get_n_cycles_three_layers(state_list, self.layer_list)
         null_prob = torch.sum(
             self.null_distribution * torch.exp(
-                -(torch.arange(self.null_distribution.numel()) - n_cycles)**2 / (2 * sigma**2)
+                -(torch.arange(self.null_distribution.numel()).float() - n_cycles)**2 / (2 * sigma**2)
             )
         )
         perturbed_prob = torch.sum(
             self.params['perturbed_distribution'] * torch.exp(
-                -(torch.arange(self.null_distribution.numel()) - n_cycles)**2 / (2 * sigma**2)
+                -(torch.arange(self.params['perturbed_distribution'].numel()).float() - n_cycles)**2 / (2 * sigma**2)
             )
         )
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
     def _get_null_distribution(self):
-        n_cycles_list = np.array([x[0, 0, 0].item() for x in self.n_cycles_statistics])
+        n_cycles_list = np.array([x[0][0, 0, 0].item() for x in self.n_cycles_statistics], dtype=int)
         null_distribution = np.bincount(n_cycles_list) / len(n_cycles_list)
-        return torch.tensor(null_distribution)
+        return torch.tensor(null_distribution, dtype=torch.float)

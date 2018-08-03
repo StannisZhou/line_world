@@ -63,7 +63,7 @@ def generate_latent_templates(n_channels, kernel_size, n_parts):
     return latent_templates
 
 
-def generate_image_templates(kernel_size, thickness, length, n_rotations):
+def generate_image_templates(kernel_size, thickness, length, n_rotations, order=1):
     """generate_image_templates
     Generate the image templates, which are linelets in the same form of those used in the data generator.
 
@@ -78,6 +78,8 @@ def generate_image_templates(kernel_size, thickness, length, n_rotations):
         length is the length of our linelets
     n_rotations : int
         n_rotations is the number of rotations we are going to consider
+    order : int
+        The interpolation order used in rotate. See http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.rotate
 
     Returns
     -------
@@ -91,7 +93,7 @@ def generate_image_templates(kernel_size, thickness, length, n_rotations):
     """
     rotation_angles = np.linspace(0, 180, n_rotations, endpoint=False)
     prototype_list = [
-        get_rotated_prototype(thickness, length, angle) for angle in rotation_angles
+        get_rotated_prototype(thickness, length, angle, order) for angle in rotation_angles
     ]
     n_rows = np.zeros(n_rotations, dtype=int)
     n_cols = np.zeros(n_rotations, dtype=int)
@@ -156,7 +158,7 @@ def get_latent_layer_grid_size_list(n_layers, d_image, kernel_size_list, stride_
 
 
 def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, kernel_size_list, stride_list,
-                                    self_rooting_prob_list, thickness, length, n_rotations, n_parts):
+                                    self_rooting_prob_list, thickness, length, n_rotations, n_parts, order=1):
     """generate_cycles_machine_layer_params
     Build the list of parameters for the different layers in the CyclesMachine.
 
@@ -188,6 +190,8 @@ def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, ker
         the image templates
     n_parts : int
         The number of parts we have in a particular object
+    order : int
+        The interpolation order used in rotate. See http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.rotate
 
     Returns
     -------
@@ -200,7 +204,7 @@ def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, ker
     templates_list = [
         generate_latent_templates(n_channels_list[ii], kernel_size_list[ii], n_parts) for ii in range(n_layers - 2)
     ]
-    templates_list.append(generate_image_templates(kernel_size_list[-1], thickness, length, n_rotations))
+    templates_list.append(generate_image_templates(kernel_size_list[-1], thickness, length, n_rotations, order))
     layer_params_list = [
         {
             'n_channels': int(n_channels_list[ii]),

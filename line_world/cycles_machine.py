@@ -64,11 +64,15 @@ class CyclesMachine(Component):
         return log_prob
 
     def evaluate_energy_gradients(self, state_list):
+        flag = False
         for state in state_list:
-            assert state.requires_grad
+            if state.requires_grad:
+                flag = True
 
-        log_prob_gradients = self.get_energy(state_list)
-        log_prob_gradients.backward()
+        assert flag
+
+        log_prob = self.get_energy(state_list)
+        log_prob.backward()
 
 
 def log_prob_markov_backbone(state_list, layer_list):

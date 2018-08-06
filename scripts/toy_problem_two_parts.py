@@ -33,8 +33,7 @@ cycles_machine = CyclesMachine({
     'layer_params_list': layer_params_list,
     'cycles_perturbation_implementation': cycles_perturbation_implementation,
     'cycles_perturbation_params': cycles_perturbation_params,
-    'n_samples': n_samples,
-    'threshold': 1e-2
+    'n_samples': n_samples
 })
 
 image = torch.zeros(cycles_machine.layer_list[2].state_shape)

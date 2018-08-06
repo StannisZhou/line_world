@@ -105,7 +105,7 @@ class Layer(Component):
         """
         return torch.Size([self.n_channels, self.grid_size, self.grid_size, self.n_templates + 1])
 
-    def get_log_prob(self, state, no_parents_prob, threshold):
+    def get_log_prob(self, state, no_parents_prob):
         """get_log_prob
         Get the log probability related to the Markov backbone for this layer
 
@@ -120,8 +120,6 @@ class Layer(Component):
             no_parents_prob is a tensor of shape self.shape, i.e. it has the same shape as the bricks in
             this layer. Each component contains the information coming from the previous layer in terms of
             the probability that there's no parents pointing to the corresponding brick.
-        threshold : float
-            threshold is the threshold above which we are going to start considering the probability.
 
         Returns
         -------
@@ -137,9 +135,9 @@ class Layer(Component):
         reference_state[state > 0.5] = 1
         reference_state[state <= 0.5] = 0
         log_prob = calc_log_prob(
-            state, torch.unsqueeze(no_parents_prob, -1) * self.params['brick_self_rooting_prob'], threshold
+            torch.unsqueeze(no_parents_prob, -1) * state, self.params['brick_self_rooting_prob']
         ) + calc_log_prob(
-            state, torch.unsqueeze((1 - no_parents_prob), -1) * self.params['brick_parent_prob'], threshold
+            torch.unsqueeze((1 - no_parents_prob), -1) * state, self.params['brick_parent_prob']
         )
         return log_prob
 
@@ -355,7 +353,5 @@ def fast_sample_from_categorical_distribution(prob):
     return sample
 
 
-def calc_log_prob(state, prob, threshold):
-    state = state[prob > threshold]
-    prob = prob[prob > threshold]
-    return torch.sum(state * torch.log(prob))
+def calc_log_prob(state, prob):
+    return torch.sum(state[..., prob > 0] * torch.log(prob[prob > 0]))

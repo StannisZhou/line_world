@@ -28,11 +28,6 @@ class CyclesMachine(Component):
             'The number of samples we are going to use to estimate the null distribution for the number of cycles',
             0
         )
-        proc.add(
-            'threshold', float,
-            'Threshold for dealing with small probabilities in the continuous embedding',
-            0.0
-        )
         return proc
 
     @staticmethod
@@ -63,7 +58,7 @@ class CyclesMachine(Component):
         )
 
     def get_energy(self, state_list):
-        log_prob = log_prob_markov_backbone(state_list, self.layer_list, self.params['threshold']) + \
+        log_prob = log_prob_markov_backbone(state_list, self.layer_list) + \
             self.cycles_perturbation.get_log_prob_cycles_perturbation(state_list)
 
         return log_prob
@@ -81,13 +76,13 @@ class CyclesMachine(Component):
         return -loss.item()
 
 
-def log_prob_markov_backbone(state_list, layer_list, threshold):
+def log_prob_markov_backbone(state_list, layer_list):
     assert len(state_list) == len(layer_list)
     no_parents_prob = torch.ones(layer_list[0].shape)
     log_prob = 0
     for ll, layer in enumerate(layer_list[:-1]):
-        log_prob = log_prob + layer.get_log_prob(state_list[ll], no_parents_prob, threshold)
+        log_prob = log_prob + layer.get_log_prob(state_list[ll], no_parents_prob)
         no_parents_prob = layer.get_no_parents_prob(state_list[ll])
 
-    log_prob = log_prob + layer_list[-1].get_log_prob(state_list[-1], no_parents_prob, threshold)
+    log_prob = log_prob + layer_list[-1].get_log_prob(state_list[-1], no_parents_prob)
     return log_prob

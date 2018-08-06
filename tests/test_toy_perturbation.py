@@ -69,7 +69,7 @@ def test_log_prob_markov_backbone(toy_model):
         optimal_middle_layer,
         image
     ]
-    log_prob = log_prob_markov_backbone(optimal_state_list, toy_model.layer_list, 0).item()
+    log_prob = log_prob_markov_backbone(optimal_state_list, toy_model.layer_list).item()
     expected_prob = 0.5 * (1 / 6) * 0.9**2 * (1 / 8)**2 * 0.99**12
     expected_log_prob = np.log(expected_prob)
     assert np.isclose(log_prob, expected_log_prob)

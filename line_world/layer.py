@@ -353,5 +353,7 @@ def fast_sample_from_categorical_distribution(prob):
     return sample
 
 
-def calc_log_prob(state, prob):
-    return torch.sum(state[..., prob > 0] * torch.log(prob[prob > 0]))
+def calc_log_prob(state, prob, penalty=1e-9):
+    prob[prob == 0] += penalty
+    prob = prob / torch.sum(prob, dim=-1, keepdim=True)
+    return torch.sum(state * torch.log(prob))

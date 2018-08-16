@@ -62,7 +62,7 @@ state_list = [
     torch.rand(cycles_machine.layer_list[1].state_shape).requires_grad_(),
     image
 ]
-optimizer = torch.optim.SGD(state_list[:-1], lr=0.1)
+optimizer = torch.optim.SGD(state_list, lr=0.1)
 n_steps = 2000
 for ii in range(n_steps):
     optimizer.zero_grad()

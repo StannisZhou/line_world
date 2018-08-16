@@ -1,4 +1,4 @@
-from line_world.utils import ParamsProc, Component, Optional
+from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE
 import numpy as np
 import torch
 
@@ -353,7 +353,7 @@ def fast_sample_from_categorical_distribution(prob):
     return sample
 
 
-def calc_log_prob(state, prob, penalty=1e-9):
+def calc_log_prob(state, prob, penalty=ZERO_PROB_SUBSTITUTE):
     prob[prob == 0] += penalty
     prob = prob / torch.sum(prob, dim=-1, keepdim=True)
     return torch.sum(state * torch.log(prob))

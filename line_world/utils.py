@@ -4,6 +4,11 @@ import pytz
 from datetime import datetime
 import pickle
 
+
+SCALING_CONSTANT = 10
+ZERO_PROB_SUBSTITUTE = 1e-7
+
+
 class ParamsProc(object):
     def __init__(self):
         self.keys = set()

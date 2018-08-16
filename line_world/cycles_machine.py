@@ -1,7 +1,7 @@
 from line_world.utils import ParamsProc, Component, Optional
 import numpy as np
 from line_world.layer import Layer
-from line_world.perturbation import create_cycles_perturbation
+from line_world.perturbation import create_cycles_perturbation, draw_samples_markov_backbone
 import torch
 
 
@@ -56,6 +56,9 @@ class CyclesMachine(Component):
             self.layer_list, self.params['n_samples'],
             self.params['cycles_perturbation_params']
         )
+
+    def draw_samples_markov_backbone(self):
+        return draw_samples_markov_backbone(self.layer_list)
 
     def get_energy(self, state_list):
         log_prob = log_prob_markov_backbone(state_list, self.layer_list) + \

@@ -145,6 +145,10 @@ class CyclesPerturbation(object):
             get_n_cycles(state_list, layer_list) for state_list in state_list_samples
         ]
 
+    @property
+    def perturbation_upperbound(self):
+        raise Exception('Must be implemented')
+
     def get_log_prob_cycles_perturbation(self, state_list):
         raise Exception("Must be implemented")
 
@@ -153,8 +157,12 @@ class MarkovBackbone(CyclesPerturbation):
     def __init__(self, layer_list, n_samples, params):
         pass
 
+    @property
+    def perturbation_upperbound(self):
+        return torch.tensor(1)
+
     def get_log_prob_cycles_perturbation(self, state_list):
-        return 0
+        return torch.tensor(0)
 
 
 class ToyPerturbation(CyclesPerturbation):
@@ -170,7 +178,7 @@ class ToyPerturbation(CyclesPerturbation):
             n_samples is the number of samples we are going to use to estimate the null distribution
         params : dict
             params is a dictionary containing the relevant parameters
-            params['perturbation_distribution'] : torch.Tensor
+            params['perturbed_distribution'] : torch.Tensor
                 A torch tensor containing the perturbed distribution on the number of cycles
             params['sigma'] : float
                 The standard deviation we are going to use in the continuous interpolation of the cycles distribution
@@ -186,6 +194,16 @@ class ToyPerturbation(CyclesPerturbation):
         assert [key in params for key in ['perturbed_distribution', 'sigma']]
         assert torch.sum(params['perturbed_distribution']) == 1
         self.params = params
+        upper_bound = torch.max(
+            self.params['perturbed_distribution']
+        ) / torch.min(
+            self.null_distribution[self.null_distribution > 0]
+        )
+        self.upper_bound = upper_bound
+
+    @property
+    def perturbation_upperbound(self):
+        return self.upper_bound
 
     def get_log_prob_cycles_perturbation(self, state_list):
         sigma = self.params['sigma']

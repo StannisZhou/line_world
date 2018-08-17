@@ -3,6 +3,7 @@ import numpy as np
 from line_world.layer import Layer
 from line_world.perturbation import create_cycles_perturbation, draw_sample_markov_backbone
 import torch
+from tqdm import tqdm
 
 
 class CyclesMachine(Component):
@@ -59,6 +60,22 @@ class CyclesMachine(Component):
 
     def draw_sample_markov_backbone(self):
         return draw_sample_markov_backbone(self.layer_list)
+
+    def draw_sample_rejection_sampling(self):
+        print('Drawing sample using rejection sampling')
+        with tqdm() as pbar:
+            while True:
+                layer_sample_list = self.draw_sample_markov_backbone()
+                perturbation = torch.exp(
+                    self.cycles_perturbation.get_log_prob_cycles_perturbation(layer_sample_list)
+                )
+                acceptance_prob = perturbation / self.cycles_perturbation.perturbation_upperbound
+                if torch.bernoulli(acceptance_prob):
+                    break
+
+                pbar.update()
+
+        return layer_sample_list
 
     def get_energy(self, state_list):
         log_prob = log_prob_markov_backbone(state_list, self.layer_list) + \

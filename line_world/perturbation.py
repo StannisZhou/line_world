@@ -70,9 +70,9 @@ def get_n_cycles_three_layers(state_list, layer_list):
     return n_cycles
 
 
-def draw_samples_markov_backbone(layer_list):
-    """draw_samples_markov_backbone
-    Draw samples from the Markov backbone
+def draw_sample_markov_backbone(layer_list):
+    """draw_sample_markov_backbone
+    Draw a single sample from the Markov backbone
 
     Parameters
     ----------
@@ -139,7 +139,7 @@ class CyclesPerturbation(object):
         self.layer_list = layer_list
         logging.info('Getting samples for the null distribution on the number of cycles')
         state_list_samples = [
-            draw_samples_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
+            draw_sample_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
         ]
         self.n_cycles_statistics = [
             get_n_cycles(state_list, layer_list) for state_list in state_list_samples

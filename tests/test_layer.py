@@ -1,7 +1,7 @@
 from test_model import simple_model
 import torch
 import numpy as np
-from line_world.perturbation import draw_samples_markov_backbone
+from line_world.perturbation import draw_sample_markov_backbone
 
 
 def test_expanded_templates(simple_model):
@@ -26,7 +26,7 @@ def test_expanded_templates(simple_model):
 
 
 def test_no_parents_prob(simple_model):
-    layer_sample_list = draw_samples_markov_backbone(simple_model.layer_list)
+    layer_sample_list = draw_sample_markov_backbone(simple_model.layer_list)
     for ll, layer in enumerate(simple_model.layer_list[:-1]):
         layer_sample = layer_sample_list[ll].numpy()
         no_parents_prob = layer.get_no_parents_prob(layer_sample_list[ll]).numpy()
@@ -47,7 +47,7 @@ def test_no_parents_prob(simple_model):
 
 
 def test_log_prob(simple_model):
-    layer_sample_list = draw_samples_markov_backbone(simple_model.layer_list)
+    layer_sample_list = draw_sample_markov_backbone(simple_model.layer_list)
     no_parents_prob = torch.ones(simple_model.layer_list[0].shape)
     for ll, layer in enumerate(simple_model.layer_list):
         layer_sample = layer_sample_list[ll]

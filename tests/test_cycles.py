@@ -1,10 +1,10 @@
 from test_model import toy_model
-from line_world.perturbation import draw_samples_markov_backbone, get_n_cycles
+from line_world.perturbation import draw_sample_markov_backbone, get_n_cycles
 import numpy as np
 
 
 def test_count_cycles(toy_model):
-    layer_sample_list = draw_samples_markov_backbone(toy_model.layer_list)
+    layer_sample_list = draw_sample_markov_backbone(toy_model.layer_list)
     n_cycles_list = get_n_cycles(layer_sample_list, toy_model.layer_list)
     ind = np.nonzero(layer_sample_list[1][..., 1:].numpy())
     expanded_templates = toy_model.layer_list[1].expanded_templates.to_dense().numpy()

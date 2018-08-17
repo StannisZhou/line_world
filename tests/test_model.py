@@ -1,7 +1,7 @@
 import numpy as np
 from line_world.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
-from line_world.perturbation import draw_samples_markov_backbone
+from line_world.perturbation import draw_sample_markov_backbone
 import pytest
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def simple_model():
 
 
 def test_model(simple_model):
-    layer_sample_list = draw_samples_markov_backbone(simple_model.layer_list)
+    layer_sample_list = draw_sample_markov_backbone(simple_model.layer_list)
     for layer_sample in layer_sample_list:
         layer_sample.requires_grad_()
 

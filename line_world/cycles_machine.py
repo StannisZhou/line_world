@@ -1,7 +1,8 @@
 from line_world.utils import ParamsProc, Component, Optional
 import numpy as np
 from line_world.layer import Layer
-from line_world.perturbation import create_cycles_perturbation, draw_sample_markov_backbone
+from line_world.perturbation import create_cycles_perturbation
+from line_world.sample.markov_backbone import draw_sample_markov_backbone
 import torch
 from tqdm import tqdm
 

@@ -2,6 +2,7 @@ from tqdm import tqdm
 import torch
 import logging
 import numpy as np
+from line_world.sample.markov_backbone import draw_sample_markov_backbone
 
 
 def get_n_cycles(state_list, layer_list):
@@ -70,35 +71,6 @@ def get_n_cycles_three_layers(state_list, layer_list):
     return n_cycles
 
 
-def draw_sample_markov_backbone(layer_list):
-    """draw_sample_markov_backbone
-    Draw a single sample from the Markov backbone
-
-    Parameters
-    ----------
-
-    layer_list : list
-        layer_list is a list of layers
-
-    Returns
-    -------
-
-    layer_sample_list : list
-        A list of samples for different layer. Each element is a tensor of state_shape of
-        each layer
-
-    """
-    layer_sample_list = []
-    no_parents_prob = torch.ones(layer_list[0].shape)
-    for layer in layer_list[:-1]:
-        layer_sample = layer.draw_sample(no_parents_prob)
-        no_parents_prob = layer.get_no_parents_prob(layer_sample)
-        layer_sample_list.append(layer_sample)
-
-    layer_sample_list.append(layer_list[-1].draw_sample(no_parents_prob))
-    return layer_sample_list
-
-
 def create_cycles_perturbation(implementation, layer_list, n_samples, params):
     """create_cycles_perturbation
     Factory method for creating cycles perturbation
@@ -162,7 +134,7 @@ class MarkovBackbone(CyclesPerturbation):
         return torch.tensor(1)
 
     def get_log_prob_cycles_perturbation(self, state_list):
-        return torch.tensor(0)
+        return torch.tensor(0, dtype=torch.float)
 
 
 class ToyPerturbation(CyclesPerturbation):

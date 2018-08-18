@@ -1,7 +1,7 @@
 import numpy as np
 from line_world.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
-from line_world.perturbation import draw_sample_markov_backbone
+from line_world.sample.markov_backbone import draw_sample_markov_backbone
 import torch
 import torch.optim
 

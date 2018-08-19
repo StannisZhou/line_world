@@ -1,4 +1,4 @@
-from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE
+from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE, NO_PARENTS_PROB_MARGIN
 import numpy as np
 import torch
 import torch.nn.functional
@@ -262,7 +262,7 @@ class Layer(Component):
         if sampling:
             assert torch.sum(no_parents_prob == 0) + torch.sum(no_parents_prob == 1) == no_parents_prob.numel()
         else:
-            assert torch.sum((no_parents_prob >= 0) * (no_parents_prob <= 1)) == no_parents_prob.numel()
+            assert torch.sum((no_parents_prob >= 0) * (no_parents_prob <= 1 + NO_PARENTS_PROB_MARGIN)) == no_parents_prob.numel()
 
     def _normalize_state(self, state):
         """_normalize_state

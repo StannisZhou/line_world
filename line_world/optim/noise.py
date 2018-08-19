@@ -11,9 +11,12 @@ class Noise(object):
 
 
 def create_noise(implementation, params):
-    if implementation == 'istropic_gaussian':
+    if implementation == 'isotropic_gaussian':
         assert set(params.keys()) == set(['sigma'])
         return IstropicGaussian(**params)
+    elif implementation == 'markov_backbone':
+        assert set(params.keys()) ==  set(['cycles_machine', 'sigma'])
+        return MarkovBackbone(**params)
     else:
         raise Exception('Unsupported implementation {}'.format(implementation))
 
@@ -35,16 +38,16 @@ class MarkovBackbone(Noise):
         self.sigma = sigma
 
     def noisy_gradients(self, state_list):
-        layer_sample_list = self.cycles_machine.draw_samples_markov_backbone()
+        layer_sample_list = self.cycles_machine.draw_sample_markov_backbone()
         for layer_sample, state in zip(layer_sample_list, state_list):
             assert layer_sample.shape == state.shape
 
         layer_sample_list = [
             (SCALING_CONSTANT * layer_sample).requires_grad_() for layer_sample in layer_sample_list
         ]
-        for layer_sample in layer_sample_list:
-            layer_sample.grad.detach_()
-            layer_sample.grad.zero_()
+        for ss, state in enumerate(state_list):
+            if not state.requires_grad:
+                layer_sample_list[ss].data.copy_(state.data)
 
         self.cycles_machine.evaluate_energy_gradients(layer_sample_list)
         noise = [

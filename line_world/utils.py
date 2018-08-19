@@ -5,8 +5,9 @@ from datetime import datetime
 import pickle
 
 
-SCALING_CONSTANT = 10
-ZERO_PROB_SUBSTITUTE = 1e-7
+SCALING_CONSTANT = 5
+ZERO_PROB_SUBSTITUTE = 1e-6
+NO_PARENTS_PROB_MARGIN = 1e-6
 
 
 class ParamsProc(object):

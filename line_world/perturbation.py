@@ -3,6 +3,7 @@ import torch
 import logging
 import numpy as np
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
+from line_world.sample.fast_sampler import fast_sample_markov_backbone
 
 
 def get_n_cycles(state_list, layer_list):
@@ -26,6 +27,9 @@ def get_n_cycles(state_list, layer_list):
 
     """
     assert len(state_list) == len(layer_list)
+    if type(state_list[0]) is not torch.Tensor:
+        state_list = [torch.tensor(state, dtype=torch.float) for state in state_list]
+
     n_cycles_list = [
         get_n_cycles_three_layers(state_list[ii:ii + 3], layer_list[ii:ii + 3])
         for ii in range(len(state_list) - 2)
@@ -107,12 +111,16 @@ def create_cycles_perturbation(implementation, layer_list, n_samples, params):
 
 
 class CyclesPerturbation(object):
-    def __init__(self, layer_list, n_samples):
+    def __init__(self, layer_list, n_samples, fast_sample):
         self.layer_list = layer_list
         logging.info('Getting samples for the null distribution on the number of cycles')
-        state_list_samples = [
-            draw_sample_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
-        ]
+        if fast_sample:
+            state_list_samples = fast_sample_markov_backbone(layer_list, n_samples)
+        else:
+            state_list_samples = [
+                draw_sample_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
+            ]
+
         self.n_cycles_statistics = [
             get_n_cycles(state_list, layer_list) for state_list in state_list_samples
         ]
@@ -154,6 +162,8 @@ class ToyPerturbation(CyclesPerturbation):
                 A torch tensor containing the perturbed distribution on the number of cycles
             params['sigma'] : float
                 The standard deviation we are going to use in the continuous interpolation of the cycles distribution
+            params['fast_sample']: bool
+                Whether we are going to use the fast sampler or not. Defaults to be True
 
         Returns
         -------
@@ -161,9 +171,10 @@ class ToyPerturbation(CyclesPerturbation):
         """
         assert len(layer_list) == 3
         assert layer_list[0].shape == torch.Size([1, 1, 1])
-        super().__init__(layer_list, n_samples)
-        self.null_distribution = self._get_null_distribution()
+        params['fast_sample'] = params.get('fast_sample', True)
         assert [key in params for key in ['perturbed_distribution', 'sigma']]
+        super().__init__(layer_list, n_samples, params['fast_sample'])
+        self.null_distribution = self._get_null_distribution()
         assert torch.sum(params['perturbed_distribution']) == 1
         self.params = params
         upper_bound = torch.max(

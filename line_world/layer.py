@@ -1,6 +1,7 @@
 from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE
 import numpy as np
 import torch
+import torch.nn.functional
 
 
 class Layer(Component):
@@ -278,10 +279,7 @@ class Layer(Component):
 
         """
         if not np.allclose(torch.sum(state, dim=3).detach().numpy(), 1):
-            exp_state = torch.exp(state)
-            state = exp_state / torch.sum(
-                exp_state, dim=3, keepdim=True
-            )
+            state = torch.nn.functional.softmax(state, dim=3)
 
         assert state.size() == self.state_shape
         assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)

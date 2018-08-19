@@ -11,7 +11,7 @@ n_channels_list = np.ones(n_layers - 1, dtype=int)
 d_image = 6
 kernel_size_list = np.array([4, 3], dtype=int)
 stride_list = np.ones(n_layers - 1, dtype=int)
-self_rooting_prob_list = np.array([0.9, 0.01, 0.01])
+self_rooting_prob_list = np.array([1.0, 0.01, 0.01])
 thickness = 1
 length = 3
 n_rotations = 4
@@ -85,7 +85,7 @@ state_list = [
 initial_weight_decay = 1.0
 n_steps = 50
 for ww in range(40):
-    optimizer = torch.optim.SGD(state_list[:-1], lr=0.1, weight_decay=initial_weight_decay * 1.5**(-ww))
+    optimizer = torch.optim.SGD(state_list[:-1], lr=1.0, weight_decay=initial_weight_decay * 1.5**(-ww))
     for ii in range(n_steps):
         optimizer.zero_grad()
         log_prob = cycles_machine.evaluate_energy_gradients(state_list)

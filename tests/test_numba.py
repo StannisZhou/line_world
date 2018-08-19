@@ -3,7 +3,7 @@ import torch
 import timeit
 from test_model import simple_model
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
-from line_world.sample.fast_sampler import get_no_parents_prob_numba, fast_sample_markov_backbone
+from line_world.sample.fast_markov_backbone import get_no_parents_prob_numba, fast_sample_markov_backbone
 from line_world.perturbation import ToyPerturbation
 from line_world.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params

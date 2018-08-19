@@ -3,7 +3,7 @@ import torch
 import logging
 import numpy as np
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
-from line_world.sample.fast_sampler import fast_sample_markov_backbone
+from line_world.sample.fast_markov_backbone import fast_sample_markov_backbone
 
 
 def get_n_cycles(state_list, layer_list):

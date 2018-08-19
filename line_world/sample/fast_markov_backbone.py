@@ -27,10 +27,6 @@ def fast_sample_markov_backbone(layer_list, n_samples):
     return samples_list
 
 
-def fast_sample_rejection_sampling(layer_list, cycles_perturbation):
-    pass
-
-
 @numba.jit(nopython=True, nogil=True, cache=True)
 def draw_multiple_samples_markov_backbone_numba(n_samples, n_channels_list, grid_size_list, n_templates_list, expanded_templates_list, self_rooting_prob_list, parent_prob_list):
     samples_list = []

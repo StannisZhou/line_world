@@ -2,7 +2,7 @@ from line_world.layer import fast_sample_from_categorical_distribution
 import torch
 import numpy as np
 from collections import Counter
-from line_world.sample.fast_markov_backbone import sample_from_categorical_distribution_numba
+from line_world.numba.layer import sample_from_categorical_distribution_numba
 
 
 def test_sampling():

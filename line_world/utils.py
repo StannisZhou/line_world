@@ -7,7 +7,7 @@ import pickle
 
 SCALING_CONSTANT = 5
 ZERO_PROB_SUBSTITUTE = 1e-6
-NO_PARENTS_PROB_MARGIN = 1e-6
+NO_PARENTS_PROB_MARGIN = 1e-5
 
 
 class ParamsProc(object):

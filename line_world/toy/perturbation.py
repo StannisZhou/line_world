@@ -35,16 +35,25 @@ class ToyPerturbation(CyclesPerturbation):
         self.null_distribution = self._get_null_distribution()
         assert torch.sum(params['perturbed_distribution']) == 1
         self.params = params
-        upper_bound = torch.max(
-            self.params['perturbed_distribution']
-        ) / torch.min(
-            self.null_distribution[self.null_distribution > 0]
-        )
-        self.upper_bound = upper_bound
 
     @property
     def perturbation_upperbound(self):
-        return self.upper_bound
+        if hasattr(self, 'upper_bound'):
+            return self.upper_bound
+        else:
+            upper_bound = 0
+            assert len(self.params['perturbed_distribution']) <= len(self.null_distribution)
+            for ii in range(len(self.params['perturbed_distribution'])):
+                if self.null_distribution[ii] == 0:
+                    assert self.params['perturbed_distribution'][ii] == 0
+                    continue
+                else:
+                    temp = self.params['perturbed_distribution'][ii] / self.null_distribution[ii]
+                    if temp > upper_bound:
+                        upper_bound = temp
+
+            self.upper_bound = upper_bound
+            return upper_bound
 
     def get_log_prob_cycles_perturbation(self, state_list):
         sigma = self.params['sigma']
@@ -60,6 +69,22 @@ class ToyPerturbation(CyclesPerturbation):
             )
         )
         return torch.log(perturbed_prob) - torch.log(null_prob)
+
+    def get_discrete_log_prob_cycles_perturbation(self, state_list):
+        self._validate_state(state_list)
+        n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
+        null_prob = self.null_distribution[n_cycles]
+        perturbed_prob = self.params['perturbed_distribution'][n_cycles]
+        return torch.log(perturbed_prob) - torch.log(null_prob)
+
+    def get_n_cycles(self, state_list):
+        n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
+        return self.layer_list[-1].get_on_bricks_prob(state_list[-1]), n_cycles
+
+    def _validate_state(self, state_list):
+        for state in state_list:
+            assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
+            assert torch.sum((state == 0) + (state == 1)) == state.numel()
 
     def _get_null_distribution(self):
         n_cycles_list = np.array([x[0][0, 0, 0].item() for x in self.n_cycles_statistics], dtype=int)

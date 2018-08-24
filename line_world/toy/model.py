@@ -4,7 +4,9 @@ from line_world.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
 
 
-def two_parts(self_rooting_prob_list, perturbed_distribution, sigma):
+def two_parts(self_rooting_prob_list=np.array([0.5, 0.001, 0.001]),
+              perturbed_distribution=torch.tensor([0.01, 0.01, 0.97, 0.01]),
+              sigma=0.2, n_samples=int(2e3)):
     # Set basic parameters
     n_layers = 3
     n_channels_list = np.ones(n_layers - 1, dtype=int)
@@ -22,7 +24,6 @@ def two_parts(self_rooting_prob_list, perturbed_distribution, sigma):
         'perturbed_distribution': perturbed_distribution,
         'sigma': sigma
     }
-    n_samples = int(2e3)
 
     # Initialize the CyclesMachine
     layer_params_list = generate_cycles_machine_layer_params(
@@ -60,7 +61,9 @@ def two_parts(self_rooting_prob_list, perturbed_distribution, sigma):
     return cycles_machine, optimal_state_list, optimal_log_prob
 
 
-def three_parts(self_rooting_prob_list, perturbed_distribution, sigma):
+def three_parts(self_rooting_prob_list=np.array([0.9, 0.01, 0.01]),
+                perturbed_distribution=torch.tensor([0.001, 0.001, 0.001, 0.001, 0.001, 0.994, 0, 0.001]),
+                sigma=1.0, n_samples=int(3e3)):
     # Set basic parameters
     n_layers = 3
     n_channels_list = np.ones(n_layers - 1, dtype=int)
@@ -78,7 +81,6 @@ def three_parts(self_rooting_prob_list, perturbed_distribution, sigma):
         'perturbed_distribution': perturbed_distribution,
         'sigma': sigma
     }
-    n_samples = int(3e3)
 
     # Initialize the CyclesMachine
     layer_params_list = generate_cycles_machine_layer_params(

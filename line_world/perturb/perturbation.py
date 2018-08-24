@@ -97,6 +97,9 @@ class CyclesPerturbation(object):
     def get_log_prob_cycles_perturbation(self, state_list):
         raise Exception("Must be implemented")
 
+    def get_discrete_log_prob_cycles_perturbation(self, state_list):
+        raise Exception("Must be implemented")
+
 
 class MarkovBackbone(CyclesPerturbation):
     def __init__(self, layer_list, n_samples, params):
@@ -107,4 +110,7 @@ class MarkovBackbone(CyclesPerturbation):
         return torch.tensor(1)
 
     def get_log_prob_cycles_perturbation(self, state_list):
+        return torch.tensor(0, dtype=torch.float)
+
+    def get_discrete_log_prob_cycles_perturbation(self, state_list):
         return torch.tensor(0, dtype=torch.float)

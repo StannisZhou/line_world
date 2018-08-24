@@ -1,5 +1,5 @@
 from test_model import toy_model
-from line_world.perturbation import get_n_cycles
+from line_world.perturb.perturbation import get_n_cycles
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 import numpy as np
 

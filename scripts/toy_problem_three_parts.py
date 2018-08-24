@@ -24,7 +24,7 @@ cycles_perturbation_params = {
     'perturbed_distribution': perturbed_distribution,
     'sigma': 1.0
 }
-n_samples = int(2e3)
+n_samples = int(3e3)
 
 # Initialize the CyclesMachine
 layer_params_list = generate_cycles_machine_layer_params(

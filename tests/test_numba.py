@@ -8,7 +8,8 @@ from line_world.sample.fast_markov_backbone import fast_sample_markov_backbone
 from line_world.numba.layer import get_no_parents_prob_numba, get_no_parents_prob_separate_numba
 from line_world.numba.perturbation import get_n_cycles_three_layers_numba, toy_perturbation_numba
 from line_world.sample.fast_rejection_sampling import fast_sample_rejection_sampling
-from line_world.perturbation import ToyPerturbation, get_n_cycles
+from line_world.perturb.perturbation import get_n_cycles
+from line_world.toy.perturbation import ToyPerturbation
 from line_world.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
 

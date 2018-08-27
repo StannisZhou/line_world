@@ -33,7 +33,7 @@ class ToyPerturbation(CyclesPerturbation):
         assert [key in params for key in ['perturbed_distribution', 'sigma']]
         super().__init__(layer_list, n_samples, params['fast_sample'])
         self.null_distribution = self._get_null_distribution()
-        assert torch.sum(params['perturbed_distribution']) == 1
+        assert np.isclose(torch.sum(params['perturbed_distribution']).item(), 1)
         self.params = params
 
     @property

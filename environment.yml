@@ -1,0 +1,17 @@
+name: line_world
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.6
+  - numba
+  - numpy
+  - scikit-image
+  - scipy
+  - pytorch
+  - torchvision
+  - tqdm
+  - pytest
+  - cython
+  - pip:
+     - sparse

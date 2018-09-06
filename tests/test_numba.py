@@ -10,7 +10,7 @@ from line_world.numba.perturbation import get_n_cycles_three_layers_numba, toy_p
 from line_world.sample.fast_rejection_sampling import fast_sample_rejection_sampling
 from line_world.perturb.perturbation import get_n_cycles
 from line_world.toy.perturbation import ToyPerturbation
-from line_world.cycles_machine import CyclesMachine
+from line_world.core.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
 
 N_SAMPLES = int(5e3)

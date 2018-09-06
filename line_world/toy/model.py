@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from line_world.cycles_machine import CyclesMachine
+from line_world.core.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
 
 

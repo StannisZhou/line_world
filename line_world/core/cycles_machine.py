@@ -1,6 +1,6 @@
 from line_world.utils import ParamsProc, Component, Optional
 import numpy as np
-from line_world.layer import Layer
+from line_world.core.layer import Layer
 from line_world.perturb.factory import create_cycles_perturbation
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 import torch
@@ -14,6 +14,11 @@ class CyclesMachine(Component):
         proc.add(
             'layer_params_list', list,
             'The parameters for the different layers in the Markov backbone'
+        )
+        proc.add(
+            'coarse_layer_params_list', list,
+            'The parameters for the different coarse layers in the cycles machine',
+            []
         )
         proc.add(
             'cycles_perturbation_implementation', str,
@@ -53,11 +58,20 @@ class CyclesMachine(Component):
         for layer_params in self.params['layer_params_list']:
             self.layer_list.append(Layer(layer_params))
 
+        self.coarse_layer_list = [
+            [] for _ in range(len(self.params['layer_params_list']))
+        ]
+        for coarse_layer_params in self.params['coarse_layer_params_list']:
+            self.add_coarse_layer(coarse_layer_params)
+
         self.cycles_perturbation = create_cycles_perturbation(
             self.params['cycles_perturbation_implementation'],
             self.layer_list, self.params['n_samples'],
             self.params['cycles_perturbation_params']
         )
+
+    def add_coarse_layer(self, params):
+        pass
 
     def draw_sample_markov_backbone(self):
         return draw_sample_markov_backbone(self.layer_list)

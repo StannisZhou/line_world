@@ -1,4 +1,5 @@
 from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE, NO_PARENTS_PROB_MARGIN
+from line_world.core.templates import expand_templates
 import numpy as np
 import torch
 import torch.nn.functional
@@ -65,7 +66,10 @@ class Layer(Component):
     def __init__(self, params):
         super().__init__(params)
         if type(self.params['templates']) is not Optional:
-            self._expand_templates()
+            self.expanded_templates = expand_templates(
+                self.params['templates'], self.params['stride'], self.n_channels, self.grid_size,
+                self.params['n_channels_next_layer'], self.params['grid_size_next_layer']
+            )
 
     @property
     def n_channels(self):
@@ -284,45 +288,6 @@ class Layer(Component):
         assert state.size() == self.state_shape
         assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
         return state
-
-    def _expand_templates(self):
-        """_expand_templates
-        Expand the templates array, which is of shape (n_templates, n_channels_next_layer, kernel_size, kernel_size),
-        to an expanded_templates sparse matrix, which is of shape
-        (n_channels, grid_size, grid_size, n_templates + 1, n_channels_next_layer, grid_size_next_layer, grid_size_next_layer)
-        I.e. we are expanding the templates to be full size of next layer, and also add the template for the off state.
-        Exists for easy calculation of the no_parents_prob array
-
-        """
-        templates = self.params['templates']
-        templates_coords = templates._indices().cpu().numpy()
-        templates_data = templates._values().cpu().numpy()
-        n_nonzeros = templates_data.size
-        coords_x = np.repeat(np.arange(self.grid_size, dtype=int), self.grid_size)
-        coords_y = np.tile(np.arange(self.grid_size, dtype=int), self.grid_size)
-        coords_x = np.repeat(coords_x, n_nonzeros)
-        coords_y = np.repeat(coords_y, n_nonzeros)
-        templates_coords = np.tile(templates_coords, self.grid_size**2)
-        templates_data = np.tile(templates_data, self.grid_size**2)
-        templates_coords[0] = templates_coords[0] + 1
-        templates_coords[2] = templates_coords[2] + self.params['stride'] * coords_x
-        templates_coords[3] = templates_coords[3] + self.params['stride'] * coords_y
-        n_nonzeros = templates_data.size
-        coords_channel = np.repeat(np.arange(self.n_channels, dtype=int), n_nonzeros)
-        coords_x = np.tile(coords_x, self.n_channels)
-        coords_y = np.tile(coords_y, self.n_channels)
-        templates_coords = np.tile(templates_coords, self.n_channels)
-        templates_data = np.tile(templates_data, self.n_channels)
-        n_nonzeros = templates_data.size
-        coords = np.zeros((7, n_nonzeros), dtype=int)
-        coords[0] = coords_channel
-        coords[1] = coords_x
-        coords[2] = coords_y
-        coords[3:] = templates_coords
-        self.expanded_templates = torch.sparse_coo_tensor(coords, templates_data, (
-            self.n_channels, self.grid_size, self.grid_size, self.n_templates + 1, self.params['n_channels_next_layer'],
-            self.params['grid_size_next_layer'], self.params['grid_size_next_layer']
-        ))
 
 
 def fast_sample_from_categorical_distribution(prob):

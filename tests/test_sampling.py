@@ -1,4 +1,4 @@
-from line_world.core.layer import fast_sample_from_categorical_distribution
+from line_world.core.layer_ops import fast_sample_from_categorical_distribution
 import torch
 import numpy as np
 from collections import Counter

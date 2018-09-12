@@ -1,5 +1,5 @@
-from line_world.utils import ParamsProc, Component, Optional, ZERO_PROB_SUBSTITUTE, NO_PARENTS_PROB_MARGIN
-from line_world.core.templates import expand_templates
+from line_world.utils import ParamsProc, Component, Optional, NO_PARENTS_PROB_MARGIN
+import line_world.core.layer_ops as lo
 import numpy as np
 import torch
 import torch.nn.functional
@@ -66,7 +66,7 @@ class Layer(Component):
     def __init__(self, params):
         super().__init__(params)
         if type(self.params['templates']) is not Optional:
-            self.expanded_templates = expand_templates(
+            self.expanded_templates = lo.expand_templates(
                 self.params['templates'], self.params['stride'], self.n_channels, self.grid_size,
                 self.params['n_channels_next_layer'], self.params['grid_size_next_layer']
             )
@@ -135,14 +135,9 @@ class Layer(Component):
 
         """
         self._validate_no_parents_prob(no_parents_prob, False)
-        state = self._normalize_state(state)
-        reference_state = torch.zeros_like(state)
-        reference_state[state > 0.5] = 1
-        reference_state[state <= 0.5] = 0
-        log_prob = calc_log_prob(
-            torch.unsqueeze(no_parents_prob, -1) * state, self.params['brick_self_rooting_prob']
-        ) + calc_log_prob(
-            torch.unsqueeze((1 - no_parents_prob), -1) * state, self.params['brick_parent_prob']
+        assert state.shape == self.state_shape
+        log_prob = lo.get_log_prob(
+            state, no_parents_prob, self.params['brick_self_rooting_prob'], self.params['brick_parent_prob']
         )
         return log_prob
 
@@ -173,19 +168,11 @@ class Layer(Component):
             and gives us the connectivity information between the two layers.
 
         """
-        state = self._normalize_state(state)
-        no_parents_prob = torch.sum(
-            state.view(
-                self.n_channels, self.grid_size, self.grid_size, self.n_templates + 1, 1, 1, 1
-            ) * (1 - self.expanded_templates.to_dense().float()), dim=3
+        no_parents_prob = lo.get_no_parents_prob(
+            state, self.expanded_templates.to_dense().float(), self.n_channels,
+            self.grid_size, self.n_templates, self.params['n_channels_next_layer'],
+            self.params['grid_size_next_layer'], aggregate
         )
-        if aggregate:
-            no_parents_prob = torch.prod(
-                no_parents_prob.view(
-                    self.n_bricks, self.params['n_channels_next_layer'],
-                    self.params['grid_size_next_layer'], self.params['grid_size_next_layer']
-                ), dim=0
-            )
         return no_parents_prob
 
     def get_on_bricks_prob(self, state):
@@ -207,8 +194,8 @@ class Layer(Component):
             are on in this layer
 
         """
-        state = self._normalize_state(state)
-        on_bricks_prob = torch.sum(state[..., 1:], dim=-1)
+        assert state.shape == self.state_shape
+        on_bricks_prob = lo.get_on_bricks_prob(state)
         return on_bricks_prob
 
     def draw_sample(self, no_parents_prob):
@@ -240,7 +227,7 @@ class Layer(Component):
         if torch.sum(no_parents_prob == 0) > 0:
             prob[no_parents_prob == 0] = self.params['brick_parent_prob']
 
-        sample = fast_sample_from_categorical_distribution(prob)
+        sample = lo.fast_sample_from_categorical_distribution(prob)
         return sample
 
     def _validate_no_parents_prob(self, no_parents_prob, sampling):
@@ -262,61 +249,4 @@ class Layer(Component):
         -------
 
         """
-        assert no_parents_prob.size() == self.shape
-        if sampling:
-            assert torch.sum(no_parents_prob == 0) + torch.sum(no_parents_prob == 1) == no_parents_prob.numel()
-        else:
-            assert torch.sum((no_parents_prob >= 0) * (no_parents_prob <= 1 + NO_PARENTS_PROB_MARGIN)) == no_parents_prob.numel()
-
-    def _normalize_state(self, state):
-        """_normalize_state
-        Normalize the state if it's unnormalized, and check to make sure the state is valid
-
-        Parameters
-        ----------
-
-        state : torch.Tensor
-            state is a tensor of shape self.state_shape. Can be unnormalized.
-
-        Returns
-        -------
-
-        """
-        if not np.allclose(torch.sum(state, dim=3).detach().numpy(), 1):
-            state = torch.nn.functional.softmax(state, dim=3)
-
-        assert state.size() == self.state_shape
-        assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
-        return state
-
-
-def fast_sample_from_categorical_distribution(prob):
-    """fast_categorical_distribution
-
-    Parameters
-    ----------
-
-    prob : torch.Tensor
-        prob is an multidimensional array where the last dimension represents a probability distribution
-
-    Returns
-    -------
-
-    sample : torch.Tensor
-        sample is an binary array of the same shape as prob. In addition, the last dimension contains only
-        one non-zero entry, and represents one sample from the categorical distribution.
-
-    """
-    prob = torch.cumsum(prob, dim=-1)
-    r = torch.rand(prob.size()[:-1])
-    indices = (prob <= torch.unsqueeze(r, -1)).sum(dim=-1).view(-1)
-    sample = torch.zeros((torch.prod(torch.tensor(prob.size()[:-1])), prob.size(-1)))
-    sample[torch.arange(torch.prod(torch.tensor(prob.size()[:-1]))), indices] = 1
-    sample = sample.reshape(prob.size())
-    return sample
-
-
-def calc_log_prob(state, prob, penalty=ZERO_PROB_SUBSTITUTE):
-    prob[prob == 0] += penalty
-    prob = prob / torch.sum(prob, dim=-1, keepdim=True)
-    return torch.sum(state * torch.log(prob))
+        lo.validate_no_parents_prob(no_parents_prob, sampling, self.shape)

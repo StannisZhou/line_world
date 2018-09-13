@@ -147,13 +147,14 @@ class CyclesMachine(Component):
         return -loss.item()
 
     def log_prob_markov_coarse_branches(self, state_list, coarse_state_dict):
-        assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
         log_prob = 0
-        for key in coarse_state_dict:
-            for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
-                log_prob += coarse_layer.get_log_prob(
-                    state_list, self.layer_list, coarse_state_dict[key]
-                )
+        if coarse_state_dict:
+            assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
+            for key in coarse_state_dict:
+                for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
+                    log_prob += coarse_layer.get_log_prob(
+                        state_list, self.layer_list, coarse_state_dict[key]
+                    )
 
         return log_prob
 

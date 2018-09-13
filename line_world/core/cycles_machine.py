@@ -1,10 +1,12 @@
-from line_world.utils import ParamsProc, Component, Optional
 import numpy as np
+import torch
+from tqdm import tqdm
+from line_world.utils import ParamsProc, Component, Optional
 from line_world.core.layer import Layer
 from line_world.perturb.factory import create_cycles_perturbation
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
-import torch
-from tqdm import tqdm
+from line_world.coarse.coarse_layer import CoarseLayer
+from line_world.coarse.coarse_ops import get_coarse_stride_kernel_size
 
 
 class CyclesMachine(Component):
@@ -58,9 +60,7 @@ class CyclesMachine(Component):
         for layer_params in self.params['layer_params_list']:
             self.layer_list.append(Layer(layer_params))
 
-        self.coarse_layer_list = [
-            [] for _ in range(len(self.params['layer_params_list']))
-        ]
+        self.coarse_layer_dict = {}
         for coarse_layer_params in self.params['coarse_layer_params_list']:
             self.add_coarse_layer(coarse_layer_params)
 
@@ -71,18 +71,44 @@ class CyclesMachine(Component):
         )
 
     def add_coarse_layer(self, params):
-        pass
+        for key in ['index_to_duplicate', 'index_to_point_to', 'templates']:
+            assert key in params
+
+        layer_list = self.layer_list[params['index_to_duplicate']:params['index_to_point_to']]
+        stride, kernel_size = get_coarse_stride_kernel_size(layer_list)
+        assert params['templates'].size(2) == kernel_size
+        assert params['templates'].size(3) == kernel_size
+        params['stride'] = stride
+        key = (params['index_to_duplicate'], params['index_to_point_to'])
+        coarse_layer = CoarseLayer(params)
+        coarse_layer.expand_templates(self.layer_list)
+        self.coarse_layer_dict.get(key, []).append(coarse_layer)
 
     def draw_sample_markov_backbone(self):
-        return draw_sample_markov_backbone(self.layer_list)
+        layer_sample_list = draw_sample_markov_backbone(self.layer_list)
+        coarse_sample_dict = self.draw_coarse_sample(layer_sample_list)
+        return layer_sample_list, coarse_sample_dict
+
+    def draw_coarse_sample(self, state_list):
+        coarse_sample_dict = {}
+        for key in self.coarse_layer_dict:
+            coarse_sample_dict[key] = []
+            for coarse_layer in coarse_layer_dict[key]:
+                coarse_sample_dict[key].append(
+                    coarse_layer.draw_sample(state_list, self.layer_list)
+                )
+
+        return coarse_sample_dict
 
     def draw_sample_rejection_sampling(self):
         print('Drawing sample using rejection sampling')
         with tqdm() as pbar:
             while True:
-                layer_sample_list = self.draw_sample_markov_backbone()
+                layer_sample_list, coarse_sample_dict = self.draw_sample_markov_backbone()
                 perturbation = torch.exp(
-                    self.cycles_perturbation.get_discrete_log_prob_cycles_perturbation(layer_sample_list)
+                    self.cycles_perturbation.get_discrete_log_prob_cycles_perturbation(
+                        layer_sample_list, coarse_sample_dict
+                    )
                 )
                 acceptance_prob = perturbation / self.cycles_perturbation.perturbation_upperbound
                 if acceptance_prob > 1:
@@ -93,25 +119,43 @@ class CyclesMachine(Component):
 
                 pbar.update()
 
-        return layer_sample_list
+        return layer_sample_list, coarse_sample_dict
 
-    def get_energy(self, state_list):
+    def get_energy(self, state_list, coarse_state_dict=None):
         log_prob = log_prob_markov_backbone(state_list, self.layer_list) + \
-            self.cycles_perturbation.get_log_prob_cycles_perturbation(state_list)
+            self.log_prob_markov_coarse_branches(state_list, coarse_state_dict) + \
+            self.cycles_perturbation.get_log_prob_cycles_perturbation(state_list, coarse_state_dict)
 
         return log_prob
 
-    def evaluate_energy_gradients(self, state_list):
+    def evaluate_energy_gradients(self, state_list, coarse_state_dict=None):
         flag = False
         for state in state_list:
             if state.requires_grad:
                 flag = True
 
+        if coarse_state_dict:
+            for key in coarse_state_dict:
+                for state in coarse_state_dict[key]:
+                    if state.requires_grad:
+                        flag = True
+
         assert flag
 
-        loss = -self.get_energy(state_list)
+        loss = -self.get_energy(state_list, coarse_state_dict)
         loss.backward()
         return -loss.item()
+
+    def log_prob_markov_coarse_branches(self, state_list, coarse_state_dict):
+        assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
+        log_prob = 0
+        for key in coarse_state_dict:
+            for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
+                log_prob += coarse_layer.get_log_prob(
+                    state_list, self.layer_list, coarse_state_dict[key]
+                )
+
+        return log_prob
 
 
 def log_prob_markov_backbone(state_list, layer_list):

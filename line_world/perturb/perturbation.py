@@ -94,10 +94,10 @@ class CyclesPerturbation(object):
     def perturbation_upperbound(self):
         raise Exception('Must be implemented')
 
-    def get_log_prob_cycles_perturbation(self, state_list):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
         raise Exception("Must be implemented")
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
         raise Exception("Must be implemented")
 
 
@@ -109,8 +109,8 @@ class MarkovBackbone(CyclesPerturbation):
     def perturbation_upperbound(self):
         return torch.tensor(1)
 
-    def get_log_prob_cycles_perturbation(self, state_list):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
         return torch.tensor(0, dtype=torch.float)
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
         return torch.tensor(0, dtype=torch.float)

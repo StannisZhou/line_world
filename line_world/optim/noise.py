@@ -38,7 +38,7 @@ class MarkovBackbone(Noise):
         self.sigma = sigma
 
     def noisy_gradients(self, state_list):
-        layer_sample_list = self.cycles_machine.draw_sample_markov_backbone()
+        layer_sample_list, _ = self.cycles_machine.draw_sample_markov_backbone()
         for layer_sample, state in zip(layer_sample_list, state_list):
             assert layer_sample.shape == state.shape
 

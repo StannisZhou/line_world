@@ -55,7 +55,7 @@ class ToyPerturbation(CyclesPerturbation):
             self.upper_bound = upper_bound
             return upper_bound
 
-    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
         sigma = self.params['sigma']
         n_cycles = get_n_cycles_three_layers(state_list, self.layer_list)
         null_prob = torch.sum(
@@ -70,7 +70,7 @@ class ToyPerturbation(CyclesPerturbation):
         )
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict=None):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
         self._validate_state(state_list)
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         null_prob = self.null_distribution[n_cycles]

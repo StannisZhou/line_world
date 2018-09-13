@@ -121,24 +121,23 @@ class CyclesMachine(Component):
 
         return layer_sample_list, coarse_sample_dict
 
-    def get_energy(self, state_list, coarse_state_dict=None):
+    def get_energy(self, state_list, coarse_state_dict={}):
         log_prob = log_prob_markov_backbone(state_list, self.layer_list) + \
             self.log_prob_markov_coarse_branches(state_list, coarse_state_dict) + \
             self.cycles_perturbation.get_log_prob_cycles_perturbation(state_list, coarse_state_dict)
 
         return log_prob
 
-    def evaluate_energy_gradients(self, state_list, coarse_state_dict=None):
+    def evaluate_energy_gradients(self, state_list, coarse_state_dict={}):
         flag = False
         for state in state_list:
             if state.requires_grad:
                 flag = True
 
-        if coarse_state_dict:
-            for key in coarse_state_dict:
-                for state in coarse_state_dict[key]:
-                    if state.requires_grad:
-                        flag = True
+        for key in coarse_state_dict:
+            for state in coarse_state_dict[key]:
+                if state.requires_grad:
+                    flag = True
 
         assert flag
 
@@ -148,13 +147,12 @@ class CyclesMachine(Component):
 
     def log_prob_markov_coarse_branches(self, state_list, coarse_state_dict):
         log_prob = 0
-        if coarse_state_dict:
-            assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
-            for key in coarse_state_dict:
-                for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
-                    log_prob += coarse_layer.get_log_prob(
-                        state_list, self.layer_list, coarse_state_dict[key]
-                    )
+        assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
+        for key in coarse_state_dict:
+            for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
+                log_prob += coarse_layer.get_log_prob(
+                    state_list, self.layer_list, coarse_state_dict[key]
+                )
 
         return log_prob
 

@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def get_coarse_stride_kernel_size(layer_list):
@@ -30,3 +31,61 @@ def get_coarse_stride_kernel_size(layer_list):
         kernel_size = (kernel_size - 1) * stride_list[ii] + kernel_size_list[ii]
 
     return stride, kernel_size
+
+
+def draw_coarse_sample(layer_list, coarse_layer_dict, state_list):
+    coarse_sample_dict = {}
+    for indices in coarse_layer_dict:
+        coarse_sample_dict[indices] = []
+        for coarse_layer in coarse_layer_dict[indices]:
+            coarse_sample_dict[indices].append(
+                coarse_layer.draw_sample(state_list, layer_list)
+            )
+
+    return coarse_sample_dict
+
+
+def get_interlayer_connections(indices, state_list, layer_list):
+    n_layers = indices[1] - indices[0]
+    layer_list = layer_list[indices[0]:indices[1] + 1]
+    state_list = state_list[indices[0]:indices[1] + 1]
+    on_bricks_prob_list = [
+        layer_list[ii].get_on_bricks_prob(state_list[ii]) for ii in range(n_layers)
+    ]
+    parents_prob_list = [
+        1 - layer_list[ii].get_no_parents_prob(state_list[ii], False) for ii in range(n_layers)
+    ]
+    connections = on_bricks_prob_list[0].reshape((-1, 1)) * parents_prob_list[0].reshape((
+        layer_list[0].n_bricks, layer_list[1].n_bricks
+    ))
+    for ii in range(1, n_layers):
+        connections = connections * on_bricks_prob_list[ii].reshape((1, -1))
+        connections = torch.matmul(connections, parents_prob_list[ii].reshape(
+            layer_list[ii].n_bricks, layer_list[ii + 1].n_bricks
+        ))
+
+    connections = connections * layer_list[-1].get_on_bricks_prob(state_list[-1]).reshape((1, -1))
+    connections = connections.reshape(layer_list[0].shape + layer_list[-1].shape)
+    return connections
+
+
+def get_n_coarse_cycles(state_list, coarse_state_dict, layer_list, coarse_layer_dict):
+    n_coarse_cycles_dict = {}
+    for indices in coarse_state_dict:
+        n_coarse_cycles_dict[indices] = get_n_coarse_cycles_for_indices(
+            indices, coarse_state_list, state_list, layer_list, coarse_layer_dict
+        )
+
+    return n_coarse_cycles_dict
+
+
+def get_n_coarse_cycles_for_indices(indices, coarse_state_list, state_list, layer_list, coarse_layer_dict):
+    n_coarse_cycles_list = []
+    fine_connections = get_interlayer_connections(indices, state_list, layer_list)
+    for cc, coarse_state in enumerate(coarse_state_list):
+        coarse_connections = coarse_layer_dict[indices][cc].get_connections(coarse_state, layer_list)
+        n_coarse_cycles_list.append(
+            torch.sum(fine_connections * coarse_connections, dim=[3, 4, 5])
+        )
+
+    return n_coarse_cycles_list

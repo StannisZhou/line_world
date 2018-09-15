@@ -1,12 +1,12 @@
 import numpy as np
 import torch
+import line_world.coarse.coarse_ops as co
 from tqdm import tqdm
 from line_world.utils import ParamsProc, Component, Optional
 from line_world.core.layer import Layer
 from line_world.perturb.factory import create_cycles_perturbation
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 from line_world.coarse.coarse_layer import CoarseLayer
-from line_world.coarse.coarse_ops import get_coarse_stride_kernel_size
 
 
 class CyclesMachine(Component):
@@ -75,14 +75,14 @@ class CyclesMachine(Component):
             assert key in params
 
         layer_list = self.layer_list[params['index_to_duplicate']:params['index_to_point_to']]
-        stride, kernel_size = get_coarse_stride_kernel_size(layer_list)
+        stride, kernel_size = co.get_coarse_stride_kernel_size(layer_list)
         assert params['templates'].size(2) == kernel_size
         assert params['templates'].size(3) == kernel_size
         params['stride'] = stride
-        key = (params['index_to_duplicate'], params['index_to_point_to'])
+        indices = (params['index_to_duplicate'], params['index_to_point_to'])
         coarse_layer = CoarseLayer(params)
         coarse_layer.expand_templates(self.layer_list)
-        self.coarse_layer_dict.get(key, []).append(coarse_layer)
+        self.coarse_layer_dict.get(indices, []).append(coarse_layer)
 
     def draw_sample_markov_backbone(self):
         layer_sample_list = draw_sample_markov_backbone(self.layer_list)
@@ -90,14 +90,9 @@ class CyclesMachine(Component):
         return layer_sample_list, coarse_sample_dict
 
     def draw_coarse_sample(self, state_list):
-        coarse_sample_dict = {}
-        for key in self.coarse_layer_dict:
-            coarse_sample_dict[key] = []
-            for coarse_layer in coarse_layer_dict[key]:
-                coarse_sample_dict[key].append(
-                    coarse_layer.draw_sample(state_list, self.layer_list)
-                )
-
+        coarse_sample_dict = co.draw_coarse_sample(
+            self.layer_list, self.coarse_layer_dict, state_list
+        )
         return coarse_sample_dict
 
     def draw_sample_rejection_sampling(self):
@@ -134,8 +129,8 @@ class CyclesMachine(Component):
             if state.requires_grad:
                 flag = True
 
-        for key in coarse_state_dict:
-            for state in coarse_state_dict[key]:
+        for indices in coarse_state_dict:
+            for state in coarse_state_dict[indices]:
                 if state.requires_grad:
                     flag = True
 
@@ -148,10 +143,10 @@ class CyclesMachine(Component):
     def log_prob_markov_coarse_branches(self, state_list, coarse_state_dict):
         log_prob = 0
         assert set(coarse_state_dict.keys()) == set(self.coarse_layer_dict.keys())
-        for key in coarse_state_dict:
-            for cc, coarse_layer in enumerate(self.coarse_layer_dict[key]):
+        for indices in coarse_state_dict:
+            for cc, coarse_layer in enumerate(self.coarse_layer_dict[indices]):
                 log_prob += coarse_layer.get_log_prob(
-                    state_list, self.layer_list, coarse_state_dict[key]
+                    state_list, self.layer_list, coarse_state_dict[indices]
                 )
 
         return log_prob

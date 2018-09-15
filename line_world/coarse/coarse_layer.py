@@ -79,6 +79,18 @@ class CoarseLayer(Component):
         )
         return no_parents_prob
 
+    def get_connections(self, coarse_state, layer_list):
+        indices = (self.params['index_to_duplicate'], self.params['index_to_point_to'])
+        on_bricks_prob_list = [
+            layer_list[indices[ii]].get_on_bricks_prob(coarse_state[ii]) for ii in range(2)
+        ]
+        parents_prob = 1 - self.get_no_parents_prob(coarse_state[0], layer_list, False)
+        connections = on_bricks_prob_list[0].reshape((-1, 1)) * parents_prob.reshape((
+            layer_list[indices[0]].n_bricks, layer_list[indices[1]].n_bricks
+        )) * on_bricks_prob_list[1].reshape((1, -1))
+        connections = connections.reshape(layer_list[indices[0]].shape + layer_list[indices[1]].shape)
+        return connections
+
     def draw_sample(self, state_list, layer_list):
         sample_top_layer = self._draw_sample_top_layer(state_list)
         sample_bottom_layer = self._draw_sample_bottom_layer(sample_top_layer, layer_list)

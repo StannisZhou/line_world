@@ -1,5 +1,5 @@
 import numpy as np
-from line_world.cycles_machine import CyclesMachine
+from line_world.core.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 from line_world.toy.model import three_parts
@@ -19,8 +19,6 @@ image = optimal_state_list[-1]
 state_list = [
     torch.rand(cycles_machine.layer_list[0].state_shape).requires_grad_(),
     torch.rand(cycles_machine.layer_list[1].state_shape).requires_grad_(),
-    #  (10 * optimal_top_layer).requires_grad_(),
-    #  (10 * optimal_middle_layer).requires_grad_(),
     image
 ]
 initial_weight_decay = 1.0

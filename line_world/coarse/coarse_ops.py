@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 
-def get_coarse_stride_kernel_size(layer_list):
+def get_coarse_stride_kernel_size(stride_list, kernel_size_list):
     """get_coarse_stride_kernel_size
     Use information from the list of layers to infer the stride and the kernel_size involved with
     a coarse layer
@@ -10,9 +10,10 @@ def get_coarse_stride_kernel_size(layer_list):
     Parameters
     ----------
 
-    layer_list : list
-        layer_list is a list of Layer objects, starting from the fine layer we are duplicating,
-        all the way to the layer above the fine layer we are pointing to
+    stride_list : np.ndarray
+        The list of all the strides in the relevant layers
+    kernel_size_list : np.ndarray
+        The list of all the kernel sizes in the relevant layers
 
     Returns
     -------
@@ -23,8 +24,6 @@ def get_coarse_stride_kernel_size(layer_list):
         The kernel size associated with the coarse layer
 
     """
-    stride_list = np.array([layer.params['stride'] for layer in layer_list], dtype=int)
-    kernel_size_list = np.array([layer.params['kernel_size'] for layer in layer_list], dtype=int)
     stride = np.prod(stride_list)
     kernel_size = 1
     for ii in range(len(layer_list)):

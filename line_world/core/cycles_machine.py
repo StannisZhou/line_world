@@ -77,7 +77,9 @@ class CyclesMachine(Component):
             assert key in params
 
         layer_list = self.layer_list[params['index_to_duplicate']:params['index_to_point_to']]
-        stride, kernel_size = co.get_coarse_stride_kernel_size(layer_list)
+        stride_list = np.array([layer.params['stride'] for layer in layer_list], dtype=int)
+        kernel_size_list = np.array([layer.params['kernel_size'] for layer in layer_list], dtype=int)
+        stride, kernel_size = co.get_coarse_stride_kernel_size(stride_list, kernel_size_list)
         assert params['templates'].size(2) == kernel_size
         assert params['templates'].size(3) == kernel_size
         params['stride'] = stride

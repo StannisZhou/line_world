@@ -70,7 +70,6 @@ def three_parts(self_rooting_prob_list=np.array([0.9, 0.01, 0.01]),
     d_image = 6
     kernel_size_list = np.array([4, 3], dtype=int)
     stride_list = np.ones(n_layers - 1, dtype=int)
-    self_rooting_prob_list = self_rooting_prob_list
     thickness = 1
     length = 3
     n_rotations = 4

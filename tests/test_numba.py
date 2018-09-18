@@ -17,7 +17,9 @@ N_SAMPLES = int(5e3)
 
 
 def test_no_parents_prob(simple_model):
-    layer_sample_list = draw_sample_markov_backbone(simple_model.layer_list)
+    layer_sample_list, _ = draw_sample_markov_backbone(
+        simple_model.layer_list, simple_model.coarse_layer_collections
+    )
     for ll, layer in enumerate(simple_model.layer_list[:-1]):
         no_parents_prob = layer.get_no_parents_prob(layer_sample_list[ll]).numpy()
         no_parents_prob_separate = layer.get_no_parents_prob(layer_sample_list[ll], False).numpy()
@@ -115,7 +117,9 @@ def test_null_distribution_two_parts(toy_model_two_parts):
         'fast_sample': False
     }
     n_samples = N_SAMPLES
-    slow_null_distribution = ToyPerturbation(toy_model_two_parts.layer_list, n_samples, params).null_distribution
+    slow_null_distribution = ToyPerturbation(
+        toy_model_two_parts.layer_list, toy_model_two_parts.coarse_layer_collections, n_samples, params
+    ).null_distribution
     fast_null_distribution = toy_model_two_parts.cycles_perturbation.null_distribution
 
 
@@ -128,7 +132,9 @@ def test_null_distribution_three_parts(toy_model_three_parts):
         'fast_sample': False
     }
     n_samples = N_SAMPLES
-    slow_null_distribution = ToyPerturbation(toy_model_three_parts.layer_list, n_samples, params).null_distribution
+    slow_null_distribution = ToyPerturbation(
+        toy_model_three_parts.layer_list, toy_model_three_parts.coarse_layer_collections, n_samples, params
+    ).null_distribution
     fast_null_distribution = toy_model_three_parts.cycles_perturbation.null_distribution
 
 

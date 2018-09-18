@@ -33,18 +33,6 @@ def get_coarse_stride_kernel_size(layer_list):
     return stride, kernel_size
 
 
-def draw_coarse_sample(layer_list, coarse_layer_dict, state_list):
-    coarse_sample_dict = {}
-    for indices in coarse_layer_dict:
-        coarse_sample_dict[indices] = []
-        for coarse_layer in coarse_layer_dict[indices]:
-            coarse_sample_dict[indices].append(
-                coarse_layer.draw_sample(state_list, layer_list)
-            )
-
-    return coarse_sample_dict
-
-
 def get_interlayer_connections(indices, state_list, layer_list):
     n_layers = indices[1] - indices[0]
     layer_list = layer_list[indices[0]:indices[1] + 1]
@@ -69,21 +57,23 @@ def get_interlayer_connections(indices, state_list, layer_list):
     return connections
 
 
-def get_n_coarse_cycles(state_list, coarse_state_dict, layer_list, coarse_layer_dict):
-    n_coarse_cycles_dict = {}
-    for indices in coarse_state_dict:
-        n_coarse_cycles_dict[indices] = get_n_coarse_cycles_for_indices(
-            indices, coarse_state_list, state_list, layer_list, coarse_layer_dict
-        )
+def get_n_coarse_cycles(state_list, coarse_state_collections, layer_list, coarse_layer_collections):
+    list_of_n_coarse_cycles_list = []
+    for cc, coarse_state_for_layer in enumerate(coarse_state_collections):
+        list_of_n_coarse_cycles_list.append(get_n_coarse_cycles_for_layer(
+            coarse_state_for_layer, state_list, layer_list, coarse_layer_collections[cc]
+        ))
 
-    return n_coarse_cycles_dict
+    return list_of_n_coarse_cycles_list
 
 
-def get_n_coarse_cycles_for_indices(indices, coarse_state_list, state_list, layer_list, coarse_layer_dict):
+def get_n_coarse_cycles_for_layer(coarse_state_for_layer, state_list, layer_list, list_of_coarse_layer):
     n_coarse_cycles_list = []
-    fine_connections = get_interlayer_connections(indices, state_list, layer_list)
-    for cc, coarse_state in enumerate(coarse_state_list):
-        coarse_connections = coarse_layer_dict[indices][cc].get_connections(coarse_state, layer_list)
+    for cc, coarse_state in enumerate(coarse_state_for_layer):
+        coarse_layer = list_of_coarse_layer[cc]
+        indices = (coarse_layer.params['index_to_duplicate'], coarse_layer.params['index_to_point_to'])
+        fine_connections = get_interlayer_connections(indices, state_list, layer_list)
+        coarse_connections = coarse_layer.get_connections(coarse_state, layer_list)
         n_coarse_cycles_list.append(
             torch.sum(fine_connections * coarse_connections, dim=[3, 4, 5])
         )

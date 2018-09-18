@@ -65,30 +65,31 @@ def get_n_cycles_three_layers(state_list, layer_list):
 
 
 class CyclesPerturbation(object):
-    def __init__(self, layer_list):
+    def __init__(self, layer_list, coarse_layer_collections):
         self.layer_list = layer_list
+        self.coarse_layer_collections = coarse_layer_collections
 
     @property
     def perturbation_upperbound(self):
         raise Exception('Must be implemented')
 
-    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_layer_list):
         raise Exception("Must be implemented")
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_layer_list):
         raise Exception("Must be implemented")
 
 
 class MarkovBackbone(CyclesPerturbation):
-    def __init__(self, layer_list, n_samples, params):
+    def __init__(self):
         pass
 
     @property
     def perturbation_upperbound(self):
         return torch.tensor(1)
 
-    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         return torch.tensor(0, dtype=torch.float)
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         return torch.tensor(0, dtype=torch.float)

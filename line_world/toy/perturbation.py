@@ -9,7 +9,7 @@ import line_world.coarse.coarse_ops as co
 
 
 class ToyPerturbation(CyclesPerturbation):
-    def __init__(self, layer_list, n_samples, params):
+    def __init__(self, layer_list, coarse_layer_collections, n_samples, params):
         """__init__
 
         Parameters
@@ -34,21 +34,26 @@ class ToyPerturbation(CyclesPerturbation):
         """
         assert len(layer_list) == 3
         assert layer_list[0].shape == torch.Size([1, 1, 1])
+        for coarse_layer_for_layer in coarse_layer_collections:
+            assert len(coarse_layer_for_layer) == 0
+
         params['fast_sample'] = params.get('fast_sample', False)
         assert [key in params for key in ['perturbed_distribution', 'sigma']]
-        super().__init__(layer_list)
+        super().__init__(layer_list, coarse_layer_collections)
         logging.info('Getting samples for the null distribution on the number of cycles')
         if params['fast_sample']:
             state_list_samples = fast_sample_markov_backbone(layer_list, n_samples)
         else:
             state_list_samples = [
-                draw_sample_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
+                draw_sample_markov_backbone(
+                    layer_list, coarse_layer_collections
+                )[0] for _ in tqdm(range(n_samples))
             ]
 
         self.n_cycles_statistics = [
             get_n_cycles(state_list, layer_list) for state_list in state_list_samples
         ]
-        self._set_null_distribution()
+        self.null_distribution = self._get_null_distribution()
         assert np.isclose(torch.sum(params['perturbed_distribution']).item(), 1)
         self.params = params
 
@@ -71,7 +76,7 @@ class ToyPerturbation(CyclesPerturbation):
             self.upper_bound = upper_bound
             return upper_bound
 
-    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_collections=None):
         sigma = self.params['sigma']
         n_cycles = get_n_cycles_three_layers(state_list, self.layer_list)
         null_prob = torch.sum(
@@ -86,7 +91,7 @@ class ToyPerturbation(CyclesPerturbation):
         )
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict={}):
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections=None):
         self._validate_state(state_list)
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         null_prob = self.null_distribution[n_cycles]
@@ -105,7 +110,7 @@ class ToyPerturbation(CyclesPerturbation):
 
 
 class ToyCoarsePerturbation(CyclesPerturbation):
-    def __init__(self, layer_list, coarse_layer_dict, n_samples, params):
+    def __init__(self, layer_list, coarse_layer_collections, n_samples, params):
         """__init__
 
         Parameters
@@ -113,8 +118,8 @@ class ToyCoarsePerturbation(CyclesPerturbation):
 
         layer_list : list
             layer_list is a list of Layer objects
-        coarse_layer_dict : dict
-            coarse_layer_dict is a dictionary containing all the coarse layer objects
+        coarse_layer_collections : dict
+            coarse_layer_collections is a dictionary containing all the coarse layer objects
         n_samples : int
             n_samples is the number of samples we are going to use to estimate the null distribution
         params : dict
@@ -134,29 +139,30 @@ class ToyCoarsePerturbation(CyclesPerturbation):
 
         """
         assert len(layer_list) == 3
+        assert len(coarse_layer_collections) == 3
         assert layer_list[0].shape == torch.Size([1, 1, 1])
-        assert set(coarse_layer_dict.keys()) == set([(0, 2)])
-        assert len(coarse-layer_dict[(0, 2)]) == 1
+        assert len(coarse_layer_collections[0]) == 1
+        assert len(coarse_layer_collections[1]) == 0
+        assert len(coarse_layer_collections[2]) == 0
         assert [key in params for key in [
             'perturbed_distribution_fine', 'perturbed_distribution_coarse', 'Sigma']
         ]
-        super().__init__(layer_list)
-        self.coarse_layer_dict = coarse_layer_dict
+        super().__init__(layer_list, coarse_layer_collections)
         logging.info('Getting samples for the null distribution on the number of cycles')
-        state_list_samples = [
-            draw_sample_markov_backbone(layer_list) for _ in tqdm(range(n_samples))
-        ]
-        coarse_state_samples = []
-        for state_list in state_list_samples:
-            coarse_state_samples.append(
-                co.draw_coarse_sample(layer_list, coarse_layer_dict, state_list)
+        state_list_samples = []
+        coarse_state_collections_samples = []
+        for _ in tqdm(range(n_samples)):
+            layer_sample_list, coarse_sample_collections = draw_sample_markov_backbone(
+                layer_list, coarse_layer_collections
             )
+            state_list_samples.append(layer_sample_list)
+            coarse_state_collections_samples.append(coarse_sample_collections)
 
         n_cycles_statistics = []
-        for state_list, coarse_state_dict in zip(state_list_samples, coarse_state_samples):
+        for state_list, coarse_state_collections in zip(state_list_samples, coarse_state_collections_samples):
             n_cycles_statistics.append((
                 get_n_cycles(state_list, layer_list),
-                co.get_n_coarse_cycles(state_list, coarse_state_dict, layer_list, coarse_layer_dict)
+                co.get_n_coarse_cycles(state_list, coarse_state_collections, layer_list, coarse_layer_collections)
             ))
 
         self.n_cycles_statistics = n_cycles_statistics
@@ -166,11 +172,11 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         self._set_perturbed_distribution()
         self.params = params
 
-    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_dict):
+    def get_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         n_coarse_cycles = int(co.get_n_coarse_cycles(
-            state_list, coarse_state_dict, self.layer_list, self.coarse_layer_dict
-        )[(0, 2)][0][0, 0, 0].item())
+            state_list, coarse_state_collections, self.layer_list, self.coarse_layer_collections
+        )[0][0][0, 0, 0].item())
         n_cycles_pair = torch.tensor([n_cycles, n_coarse_cycles], dtype=torch.float)
         perturbation_kernel = torch.distributions.multivariate_normal.MultivariateNormal(
             n_cycles_pair, covariance_matrix=self.params['Sigma']
@@ -187,30 +193,30 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         )
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
-    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_dict):
-        self._validate_state(state_list, coarse_state_dict)
+    def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
+        self._validate_state(state_list, coarse_state_collections)
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         n_coarse_cycles = int(co.get_n_coarse_cycles(
-            state_list, coarse_state_dict, self.layer_list, self.coarse_layer_dict
-        )[(0, 2)][0][0, 0, 0].item())
+            state_list, coarse_state_collections, self.layer_list, self.coarse_layer_collection
+        )[0][0][0, 0, 0].item())
         n_cycles_pair = (n_cycles, n_coarse_cycles)
         null_prob = self.null_distribution_dict[n_cycles_pair]
         perturbed_prob = self.perturbed_distribution_dict[n_cycles_pair]
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
-    def _validate_state(self, state_list, coarse_state_dict):
+    def _validate_state(self, state_list, coarse_state_collections):
         for state in state_list:
             assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
             assert torch.sum((state == 0) + (state == 1)) == state.numel()
 
-        for indices in coarse_state_dict:
-            for state in coarse_state_dict[indices]:
+        for coarse_state_for_layer in coarse_state_collections:
+            for state in coarse_state_for_layer:
                 assert np.allclose(torch.sum(state, dim=3).detach().numpy(), 1)
                 assert torch.sum((state == 0) + (state == 1)) == state.numel()
 
     def _set_null_distribution(self):
         n_cycles_pair_list = [(
-            int(x[0][0, 0, 0].item()), int(y[(0, 2)][0][0, 0, 0].item())
+            int(x[0][0, 0, 0].item()), int(y[0][0][0, 0, 0].item())
         ) for x, y in self.n_cycles_statistics]
         n_samples = len(n_cycles_pair_list)
         null_distribution_dict = {}

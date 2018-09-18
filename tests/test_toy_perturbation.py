@@ -41,7 +41,9 @@ def toy_model():
 
 
 def test_perturbation(toy_model):
-    layer_sample_list = draw_sample_markov_backbone(toy_model.layer_list)
+    layer_sample_list, _ = draw_sample_markov_backbone(
+        toy_model.layer_list, toy_model.coarse_layer_collections
+    )
     for layer_sample in layer_sample_list:
         layer_sample.requires_grad_()
 
@@ -69,7 +71,10 @@ def test_log_prob_markov_backbone(toy_model):
         optimal_middle_layer,
         image
     ]
-    log_prob = log_prob_markov_backbone(optimal_state_list, toy_model.layer_list).item()
+    coarse_state_collections = [[] for _ in range(3)]
+    log_prob = log_prob_markov_backbone(
+        optimal_state_list, toy_model.layer_list, coarse_state_collections, toy_model.coarse_layer_collections
+    ).item()
     expected_prob = 0.5 * (1 / 6) * 0.9**2 * (1 / 8)**2 * 0.99**12
     expected_log_prob = np.log(expected_prob)
     assert np.isclose(log_prob, expected_log_prob)

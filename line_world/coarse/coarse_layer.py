@@ -69,11 +69,11 @@ class CoarseLayer(Component):
             n_channels_next_layer, grid_size_next_layer
         )
 
-    def get_no_parents_prob(self, state, layer_list, aggregate=True):
+    def get_no_parents_prob(self, coarse_state, layer_list, aggregate=True):
         top_layer = layer_list[self.params['index_to_duplicate']]
         bottom_layer = layer_list[self.params['index_to_point_to']]
         no_parents_prob = lo.get_no_parents_prob(
-            state, self.expanded_templates.to_dense().float(), top_layer.n_channels,
+            coarse_state, self.expanded_templates.to_dense().float(), top_layer.n_channels,
             top_layer.grid_size, top_layer.n_templates, bottom_layer.n_channels,
             bottom_layer.grid_size, aggregate
         )
@@ -81,23 +81,15 @@ class CoarseLayer(Component):
 
     def get_connections(self, coarse_state, layer_list):
         indices = (self.params['index_to_duplicate'], self.params['index_to_point_to'])
-        on_bricks_prob_list = [
-            layer_list[indices[ii]].get_on_bricks_prob(coarse_state[ii]) for ii in range(2)
-        ]
-        parents_prob = 1 - self.get_no_parents_prob(coarse_state[0], layer_list, False)
-        connections = on_bricks_prob_list[0].reshape((-1, 1)) * parents_prob.reshape((
+        on_bricks_prob = layer_list[indices[0]].get_on_bricks_prob(coarse_state)
+        parents_prob = 1 - self.get_no_parents_prob(coarse_state, layer_list, False)
+        connections = on_bricks_prob.reshape((-1, 1)) * parents_prob.reshape((
             layer_list[indices[0]].n_bricks, layer_list[indices[1]].n_bricks
-        )) * on_bricks_prob_list[1].reshape((1, -1))
+        ))
         connections = connections.reshape(layer_list[indices[0]].shape + layer_list[indices[1]].shape)
         return connections
 
-    def draw_sample(self, state_list, layer_list):
-        sample_top_layer = self._draw_sample_top_layer(state_list)
-        sample_bottom_layer = self._draw_sample_bottom_layer(sample_top_layer, layer_list)
-        return (sample_top_layer, sample_bottom_layer)
-
-    def _draw_sample_top_layer(self, state_list):
-        state = state_list[self.params['index_to_duplicate']]
+    def draw_sample(self, state):
         no_parents_prob = 1 - lo.get_on_bricks_prob(state, state.shape)
         lo.validate_no_parents_prob(no_parents_prob, True, state.shape[:3])
         prob = torch.zeros(state.shape)
@@ -110,29 +102,12 @@ class CoarseLayer(Component):
         sample = fast_sample_from_categorical_distribution(prob)
         return sample
 
-    def _draw_sample_bottom_layer(self, sample_top_layer, layer_list):
-        no_parents_prob = self.get_no_parents_prob(sample_top_layer, layer_list)
-        sample = layer_list[self.params['index_to_point_to']].draw_sample(no_parents_prob)
-        return sample
-
-    def get_log_prob(self, state_list, layer_list, coarse_state):
-        state = state_list[self.params['index_to_duplicate']]
+    def get_log_prob(self, state, coarse_state):
         no_parents_prob = 1 - lo.get_on_bricks_prob(state, state.shape)
         lo.validate_no_parents_prob(
             no_parents_prob, False, state_list[self.params['index_to_duplicate']].shape[:3]
         )
-        state_top_layer, state_bottom_layer = coarse_state
-        log_prob = 0
-        log_prob += lo.get_log_prob(
-            state_top_layer, no_parents_prob, self.params['brick_self_rooting_prob'], self.params['brick_parent_prob']
-        )
-        no_parents_prob = self.get_no_parents_prob(state_top_layer, layer_list)
-        lo.validate_no_parents_prob(
-            no_parents_prob, False, state_list[self.params['index_to_point_to']].shape[:3]
-        )
-        bottom_layer = layer_list[self.params['index_to_point_to']]
-        log_prob += lo.get_log_prob(
-            state_bottom_layer, no_parents_prob,
-            bottom_layer.params['brick_self_rooting_prob'], bottom_layer.params['brick_parent_prob']
+        log_prob = lo.get_log_prob(
+            coarse_state, no_parents_prob, self.params['brick_self_rooting_prob'], self.params['brick_parent_prob']
         )
         return log_prob

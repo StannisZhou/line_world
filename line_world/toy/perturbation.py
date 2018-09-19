@@ -166,11 +166,15 @@ class ToyCoarsePerturbation(CyclesPerturbation):
             ))
 
         self.n_cycles_statistics = n_cycles_statistics
-        self.null_distribution = self._get_null_distribution()
+        self._set_null_distribution()
         assert np.isclose(torch.sum(params['perturbed_distribution_fine']).item(), 1)
         assert np.isclose(torch.sum(params['perturbed_distribution_coarse']).item(), 1)
-        self._set_perturbed_distribution()
         self.params = params
+        self._set_perturbed_distribution()
+
+    @property
+    def perturbation_upperbound(self):
+        return self.upper_bound
 
     def get_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
@@ -256,4 +260,4 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         self.perturbed_distribution_dict = perturbed_distribution_dict
         self.perturbed_distribution_points = perturbed_distribution_points
         self.perturbed_distribution_pmf = perturbed_distribution_pmf
-        self.perturbation_upperbound = perturbation_upperbound
+        self.upper_bound = perturbation_upperbound

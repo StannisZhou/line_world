@@ -41,7 +41,7 @@ def draw_sample_markov_backbone(layer_list, coarse_layer_collections):
             no_parents_prob_from_coarse_layers[coarse_layer.params['index_to_point_to']].append(
                 coarse_layer.get_no_parents_prob(coarse_sample, layer_list)
             )
-            coarse_sample_collections[ii].append(coarse_sample)
+            coarse_sample_collections[ll].append(coarse_sample)
 
 
     for coarse_no_parents_prob in no_parents_prob_from_coarse_layers[-1]:

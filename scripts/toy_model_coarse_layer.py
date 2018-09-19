@@ -1,0 +1,136 @@
+import numpy as np
+import line_world.coarse.coarse_ops as co
+from line_world.core.cycles_machine import CyclesMachine
+from line_world.params import generate_cycles_machine_layer_params, generate_image_templates
+from line_world.sample.markov_backbone import draw_sample_markov_backbone
+from line_world.toy.model import three_parts
+import torch
+import torch.optim
+
+# Set basic parameters
+n_layers = 3
+n_channels_list = np.ones(n_layers - 1, dtype=int)
+d_image = 6
+kernel_size_list = np.array([4, 3], dtype=int)
+stride_list = np.ones(n_layers - 1, dtype=int)
+thickness = 1
+length = 3
+n_rotations = 4
+n_parts = 3
+order = 0
+
+# Get parameters for coarse layer
+coarse_stride, coarse_kernel_size = co.get_coarse_stride_kernel_size(stride_list[:2], kernel_size_list[:2])
+coarse_layer_params = {
+    'index_to_duplicate': 0,
+    'index_to_point_to': 2,
+    'stride': coarse_stride,
+    'templates': generate_image_templates(coarse_kernel_size, thickness, 5, n_rotations, order)
+}
+
+# Set cycles perturbation parameters
+perturbed_distribution_fine = 0.0001 * torch.ones(6, dtype=torch.float)
+perturbed_distribution_fine[5] = 0.9995
+perturbed_distribution_coarse = torch.tensor([0.01, 0.01, 0.01, 0.01, 0.01, 0.95], dtype=torch.float)
+Sigma = torch.eye(2, dtype=torch.float)
+cycles_perturbation_implementation = 'toy_coarse_perturbation'
+cycles_perturbation_params = {
+    'perturbed_distribution_fine': perturbed_distribution_fine,
+    'perturbed_distribution_coarse': perturbed_distribution_coarse,
+    'Sigma': Sigma
+}
+
+# Initialize the CyclesMachine
+n_samples = int(5e2)
+self_rooting_prob_list = np.array([0.5, 0.01, 0.01])
+layer_params_list = generate_cycles_machine_layer_params(
+    n_layers, n_channels_list, d_image, kernel_size_list, stride_list, self_rooting_prob_list,
+    thickness, length, n_rotations, n_parts, order
+)
+
+cycles_machine = CyclesMachine({
+    'layer_params_list': layer_params_list,
+    'cycles_perturbation_implementation': cycles_perturbation_implementation,
+    'cycles_perturbation_params': cycles_perturbation_params,
+    'coarse_layer_params_list': [coarse_layer_params],
+    'n_samples': n_samples
+})
+
+# Set optimal states
+image = torch.zeros(cycles_machine.layer_list[2].state_shape)
+for ii in range(6):
+    for jj in range(6):
+        if ii == jj:
+            if ii == 0:
+                image[0, ii, jj, 0] = 1
+            else:
+                image[0, ii, jj, 1] = 1
+        else:
+            image[0, ii, jj, 0] = 1
+
+expanded_templates = cycles_machine.layer_list[0].expanded_templates.to_dense().numpy()
+for ind in range(expanded_templates.shape[3]):
+    if np.all(expanded_templates[0, 0, 0, ind] == np.array([[
+        [0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]
+    ]])):
+        break
+
+optimal_top_layer = torch.zeros(cycles_machine.layer_list[0].state_shape)
+optimal_top_layer[0, 0, 0, ind] = 1
+optimal_middle_layer = torch.zeros(cycles_machine.layer_list[1].state_shape)
+for ii in range(4):
+    for jj in range(4):
+        if ii == jj:
+            if ii == 0:
+                optimal_middle_layer[0, ii, jj, 0] = 1
+            else:
+                optimal_middle_layer[0, ii, jj, 8] = 1
+        else:
+            optimal_middle_layer[0, ii, jj, 0] = 1
+
+optimal_state_list = [
+    optimal_top_layer,
+    optimal_middle_layer,
+    image
+]
+
+coarse_expanded_templates = cycles_machine.coarse_layer_collections[0][0].expanded_templates.to_dense().numpy()
+expected_image = cycles_machine.layer_list[-1].get_on_bricks_prob(image).numpy()
+for coarse_ind in range(coarse_expanded_templates.shape[3]):
+    if np.all(coarse_expanded_templates[0, 0, 0, coarse_ind] == expected_image):
+        break
+
+coarse_layer_shape = cycles_machine.layer_list[0].state_shape[:3] + torch.Size([coarse_expanded_templates.shape[3]])
+optimal_coarse_layer = torch.zeros(coarse_layer_shape)
+optimal_coarse_layer[0, 0, 0, coarse_ind] = 1
+optimal_coarse_state_collections = [[optimal_coarse_layer], [], []]
+optimal_log_prob = cycles_machine.get_energy(optimal_state_list, optimal_coarse_state_collections)
+
+# Initialize state
+state_list = [
+    torch.rand(cycles_machine.layer_list[0].state_shape).requires_grad_(),
+    torch.rand(cycles_machine.layer_list[1].state_shape).requires_grad_(),
+    optimal_state_list[-1]
+]
+
+coarse_state_collections = [
+    [torch.rand(coarse_layer_shape).requires_grad_()], [], []
+]
+
+cycles_machine_state = state_list + coarse_state_collections[0]
+
+n_steps = 2000
+optimizer = torch.optim.SGD(cycles_machine_state, lr=1.0)
+for ii in range(n_steps):
+    optimizer.zero_grad()
+    log_prob = cycles_machine.evaluate_energy_gradients(state_list, coarse_state_collections)
+    print('Step #{}, log_prob: {}'.format(ii, log_prob))
+    optimizer.step()
+
+on_bricks_prob_list = [
+    cycles_machine.layer_list[ii].get_on_bricks_prob(state) for ii, state in enumerate(state_list)
+]
+ind = torch.nonzero(state_list[0] > torch.max(state_list[0]) - 1)
+expanded_templates = cycles_machine.layer_list[0].expanded_templates.to_dense()
+print('Final log_prob: {}'.format(cycles_machine.get_energy(state_list, coarse_state_collections)))
+print('Optimal log_prob: {}'.format(optimal_log_prob))

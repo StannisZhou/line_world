@@ -82,7 +82,7 @@ class CyclesMachine(Component):
         stride, kernel_size = co.get_coarse_stride_kernel_size(stride_list, kernel_size_list)
         assert params['templates'].size(2) == kernel_size
         assert params['templates'].size(3) == kernel_size
-        params['stride'] = stride
+        params['stride'] = int(stride)
         coarse_layer = CoarseLayer(params)
         coarse_layer.expand_templates(self.layer_list)
         self.coarse_layer_collections[params['index_to_duplicate']].append(coarse_layer)

@@ -24,9 +24,10 @@ def get_coarse_stride_kernel_size(stride_list, kernel_size_list):
         The kernel size associated with the coarse layer
 
     """
+    assert len(stride_list) == len(kernel_size_list)
     stride = np.prod(stride_list)
     kernel_size = 1
-    for ii in range(len(layer_list)):
+    for ii in range(len(stride_list)):
         kernel_size = (kernel_size - 1) * stride_list[ii] + kernel_size_list[ii]
 
     return stride, kernel_size

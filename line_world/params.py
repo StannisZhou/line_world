@@ -92,9 +92,14 @@ def generate_image_templates(kernel_size, thickness, length, n_rotations, order=
 
     """
     rotation_angles = np.linspace(0, 180, n_rotations, endpoint=False)
-    prototype_list = [
-        get_rotated_prototype(thickness, length, angle, order) for angle in rotation_angles
-    ]
+    if n_rotations == 4:
+        prototype_list = [
+            get_four_prototype(thickness, length, angle, order) for angle in rotation_angles
+        ]
+    else:
+        prototype_list = [
+            get_rotated_prototype(thickness, length, angle, order) for angle in rotation_angles
+        ]
     n_rows = np.zeros(n_rotations, dtype=int)
     n_cols = np.zeros(n_rotations, dtype=int)
     for ii, prototype in enumerate(prototype_list):
@@ -222,3 +227,24 @@ def generate_cycles_machine_layer_params(n_layers, n_channels_list, d_image, ker
         }
     )
     return layer_params_list
+
+
+def get_four_prototype(thickness, length, angle, order):
+    assert np.mod(angle, 45) == 0
+    assert thickness == 1
+    if angle == 0:
+        prototype = np.ones((thickness, length))
+    elif angle == 45:
+        prototype = np.zeros((length, length))
+        for ii in range(length):
+            for jj in range(length):
+                if ii + jj == length - 1:
+                    prototype[ii, jj] = 1
+    elif angle == 90:
+        prototype = np.ones((length, thickness))
+    elif angle == 135:
+        prototype = np.diag(np.ones(length))
+    else:
+        raise Exception('Unsupported angle {}'.format(angle))
+
+    return prototype

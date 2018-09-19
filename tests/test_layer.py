@@ -1,6 +1,6 @@
-from test_model import simple_model
 import torch
 import numpy as np
+from test_model import simple_model
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 
 

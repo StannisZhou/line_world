@@ -166,7 +166,7 @@ def validate_no_parents_prob(no_parents_prob, sampling, shape):
     if sampling:
         assert torch.sum(no_parents_prob == 0) + torch.sum(no_parents_prob == 1) == no_parents_prob.numel()
     else:
-        assert torch.sum((no_parents_prob >= 0) * (no_parents_prob <= 1 + NO_PARENTS_PROB_MARGIN)) == no_parents_prob.numel()
+        assert torch.sum((no_parents_prob >= -NO_PARENTS_PROB_MARGIN) * (no_parents_prob <= 1 + NO_PARENTS_PROB_MARGIN)) == no_parents_prob.numel()
 
 
 def expand_templates(templates, stride, n_channels, grid_size, n_channels_next_layer, grid_size_next_layer):
@@ -229,11 +229,11 @@ def expand_templates(templates, stride, n_channels, grid_size, n_channels_next_l
     return expanded_templates
 
 
-def get_log_prob(state, no_parents_prob, brick_self_rooting_prob, brick_parent_prob):
+def get_log_prob(state, no_parents_prob, brick_self_rooting_prob, brick_parent_prob, penalty=ZERO_PROB_SUBSTITUTE):
     state = normalize_state(state)
     log_prob = calc_log_prob(
-        torch.unsqueeze(no_parents_prob, -1) * state, brick_self_rooting_prob
+        torch.unsqueeze(no_parents_prob, -1) * state, brick_self_rooting_prob, penalty
     ) + calc_log_prob(
-        torch.unsqueeze((1 - no_parents_prob), -1) * state, brick_parent_prob
+        torch.unsqueeze((1 - no_parents_prob), -1) * state, brick_parent_prob, penalty
     )
     return log_prob

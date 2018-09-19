@@ -1,11 +1,9 @@
+import torch
+import torch.optim
 import numpy as np
 import line_world.coarse.coarse_ops as co
 from line_world.core.cycles_machine import CyclesMachine
 from line_world.params import generate_cycles_machine_layer_params, generate_image_templates
-from line_world.sample.markov_backbone import draw_sample_markov_backbone
-from line_world.toy.model import three_parts
-import torch
-import torch.optim
 
 # Set basic parameters
 n_layers = 3
@@ -31,8 +29,10 @@ coarse_layer_params = {
 # Set cycles perturbation parameters
 perturbed_distribution_fine = 0.0001 * torch.ones(6, dtype=torch.float)
 perturbed_distribution_fine[5] = 0.9995
-perturbed_distribution_coarse = torch.tensor([0.01, 0.01, 0.01, 0.01, 0.01, 0.95], dtype=torch.float)
+perturbed_distribution_coarse = 0.01 * torch.ones(10, dtype=torch.float)
+perturbed_distribution_coarse[9] = 0.91
 Sigma = torch.eye(2, dtype=torch.float)
+Sigma[1, 1] = 0.2
 cycles_perturbation_implementation = 'toy_coarse_perturbation'
 cycles_perturbation_params = {
     'perturbed_distribution_fine': perturbed_distribution_fine,
@@ -41,8 +41,8 @@ cycles_perturbation_params = {
 }
 
 # Initialize the CyclesMachine
-n_samples = int(5e2)
-self_rooting_prob_list = np.array([0.5, 0.01, 0.01])
+n_samples = int(1e4)
+self_rooting_prob_list = np.array([0.1, 0.01, 0.01])
 layer_params_list = generate_cycles_machine_layer_params(
     n_layers, n_channels_list, d_image, kernel_size_list, stride_list, self_rooting_prob_list,
     thickness, length, n_rotations, n_parts, order
@@ -119,18 +119,29 @@ coarse_state_collections = [
 
 cycles_machine_state = state_list + coarse_state_collections[0]
 
-n_steps = 2000
-optimizer = torch.optim.SGD(cycles_machine_state, lr=1.0)
-for ii in range(n_steps):
-    optimizer.zero_grad()
-    log_prob = cycles_machine.evaluate_energy_gradients(state_list, coarse_state_collections)
-    print('Step #{}, log_prob: {}'.format(ii, log_prob))
-    optimizer.step()
+#  n_steps = 2000
+#  optimizer = torch.optim.SGD(cycles_machine_state, lr=0.01)
+#  for ii in range(n_steps):
+    #  optimizer.zero_grad()
+    #  log_prob = cycles_machine.evaluate_energy_gradients(state_list, coarse_state_collections)
+    #  print('Step #{}, log_prob: {}'.format(ii, log_prob))
+    #  optimizer.step()
+
+initial_weight_decay = 1.0
+n_steps = 50
+for ww in range(40):
+    optimizer = torch.optim.SGD(cycles_machine_state, lr=0.05, weight_decay=initial_weight_decay * 1.5**(-ww))
+    for ii in range(n_steps):
+        optimizer.zero_grad()
+        log_prob = cycles_machine.evaluate_energy_gradients(state_list, coarse_state_collections)
+        print('Step #{}, log_prob: {}'.format(ww * n_steps + ii, log_prob))
+        optimizer.step()
 
 on_bricks_prob_list = [
     cycles_machine.layer_list[ii].get_on_bricks_prob(state) for ii, state in enumerate(state_list)
 ]
 ind = torch.nonzero(state_list[0] > torch.max(state_list[0]) - 1)
 expanded_templates = cycles_machine.layer_list[0].expanded_templates.to_dense()
+import pdb; pdb.set_trace()
 print('Final log_prob: {}'.format(cycles_machine.get_energy(state_list, coarse_state_collections)))
 print('Optimal log_prob: {}'.format(optimal_log_prob))

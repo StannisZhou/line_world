@@ -16,6 +16,7 @@ from line_world.params import generate_cycles_machine_layer_params
 N_SAMPLES = int(5e3)
 
 
+@pytest.mark.skip
 def test_no_parents_prob(simple_model):
     layer_sample_list, _ = draw_sample_markov_backbone(
         simple_model.layer_list, simple_model.coarse_layer_collections
@@ -37,6 +38,7 @@ def test_no_parents_prob(simple_model):
         assert np.all(no_parents_prob_separate == expected_no_parents_prob_separate)
 
 
+@pytest.mark.skip
 def test_sampling_markov_backbone(simple_model):
     fast_sample_markov_backbone(simple_model.layer_list, 100)
 
@@ -110,6 +112,7 @@ def toy_model_three_parts():
     return cycles_machine
 
 
+@pytest.mark.skip
 def test_null_distribution_two_parts(toy_model_two_parts):
     params = {
         'perturbed_distribution': torch.tensor([0.01, 0.01, 0.97, 0.01]),
@@ -123,6 +126,7 @@ def test_null_distribution_two_parts(toy_model_two_parts):
     fast_null_distribution = toy_model_two_parts.cycles_perturbation.null_distribution
 
 
+@pytest.mark.skip
 def test_null_distribution_three_parts(toy_model_three_parts):
     perturbed_distribution = 0.01 * torch.ones(6, dtype=torch.float)
     perturbed_distribution[5] = 0.95
@@ -138,6 +142,7 @@ def test_null_distribution_three_parts(toy_model_three_parts):
     fast_null_distribution = toy_model_three_parts.cycles_perturbation.null_distribution
 
 
+@pytest.mark.skip
 def test_rejection_sampling(toy_model_two_parts):
     samples_list = fast_sample_rejection_sampling(
         toy_model_two_parts.layer_list, toy_model_two_parts.params['cycles_perturbation_implementation'],
@@ -145,6 +150,7 @@ def test_rejection_sampling(toy_model_two_parts):
     )
 
 
+@pytest.mark.skip
 def test_n_cycles_three_layers(toy_model_three_parts):
     samples_list = fast_sample_markov_backbone(toy_model_three_parts.layer_list, 1000)
     n_channels_list = []
@@ -171,6 +177,7 @@ def test_n_cycles_three_layers(toy_model_three_parts):
         assert n_cycles == expected_n_cycles
 
 
+@pytest.mark.skip
 def test_toy_perturbation(toy_model_three_parts):
     samples_list = fast_sample_markov_backbone(toy_model_three_parts.layer_list, 1000)
     n_channels_list = []

@@ -6,6 +6,7 @@ from line_world.perturb.perturbation import CyclesPerturbation, get_n_cycles, ge
 from line_world.sample.markov_backbone import draw_sample_markov_backbone
 from line_world.sample.fast_markov_backbone import fast_sample_markov_backbone
 import line_world.coarse.coarse_ops as co
+import line_world.core.layer_ops as lo
 
 
 class ToyPerturbation(CyclesPerturbation):
@@ -89,7 +90,8 @@ class ToyPerturbation(CyclesPerturbation):
                 -(torch.arange(self.params['perturbed_distribution'].numel()).float() - n_cycles)**2 / (2 * sigma**2)
             )
         )
-        return torch.log(perturbed_prob) - torch.log(null_prob)
+        on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
+        return on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
 
     def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections=None):
         self._validate_state(state_list)
@@ -159,7 +161,7 @@ class ToyCoarsePerturbation(CyclesPerturbation):
             coarse_state_collections_samples.append(coarse_sample_collections)
 
         n_cycles_statistics = []
-        for state_list, coarse_state_collections in zip(state_list_samples, coarse_state_collections_samples):
+        for state_list, coarse_state_collections in tqdm(zip(state_list_samples, coarse_state_collections_samples)):
             n_cycles_statistics.append((
                 get_n_cycles(state_list, layer_list),
                 co.get_n_coarse_cycles(state_list, coarse_state_collections, layer_list, coarse_layer_collections)
@@ -195,16 +197,17 @@ class ToyCoarsePerturbation(CyclesPerturbation):
                 perturbation_kernel.log_prob(self.perturbed_distribution_points)
             )
         )
-        return torch.log(perturbed_prob) - torch.log(null_prob)
+        on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
+        return on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
 
     def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         self._validate_state(state_list, coarse_state_collections)
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         n_coarse_cycles = int(co.get_n_coarse_cycles(
-            state_list, coarse_state_collections, self.layer_list, self.coarse_layer_collection
+            state_list, coarse_state_collections, self.layer_list, self.coarse_layer_collections
         )[0][0][0, 0, 0].item())
         n_cycles_pair = (n_cycles, n_coarse_cycles)
-        null_prob = self.null_distribution_dict[n_cycles_pair]
+        null_prob = self.null_distribution_dict.get(n_cycles_pair, torch.tensor(1e-10))
         perturbed_prob = self.perturbed_distribution_dict[n_cycles_pair]
         return torch.log(perturbed_prob) - torch.log(null_prob)
 
@@ -221,13 +224,13 @@ class ToyCoarsePerturbation(CyclesPerturbation):
     def _set_null_distribution(self):
         n_cycles_pair_list = [(
             int(x[0][0, 0, 0].item()), int(y[0][0][0, 0, 0].item())
-        ) for x, y in self.n_cycles_statistics]
+        ) for x, y in tqdm(self.n_cycles_statistics)]
         n_samples = len(n_cycles_pair_list)
         null_distribution_dict = {}
-        for n_cycles_pair in n_cycles_pair_list:
+        for n_cycles_pair in tqdm(n_cycles_pair_list):
             null_distribution_dict[n_cycles_pair] = null_distribution_dict.get(
                 n_cycles_pair, 0
-            ) + (1 / n_samples)
+            ) + torch.tensor(1 / n_samples)
 
         null_distribution_points = torch.tensor(
             list(null_distribution_dict.keys()), dtype=torch.float

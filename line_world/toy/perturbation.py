@@ -91,14 +91,17 @@ class ToyPerturbation(CyclesPerturbation):
             )
         )
         on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
-        return on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        log_prob_cycles_perturbation = on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        return log_prob_cycles_perturbation
 
     def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections=None):
         self._validate_state(state_list)
         n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
         null_prob = self.null_distribution[n_cycles]
         perturbed_prob = self.params['perturbed_distribution'][n_cycles]
-        return torch.log(perturbed_prob) - torch.log(null_prob)
+        on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
+        log_prob_cycles_perturbation = on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        return log_prob_cycles_perturbation
 
     def _validate_state(self, state_list):
         for state in state_list:
@@ -179,10 +182,10 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         return self.upper_bound
 
     def get_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
-        n_cycles = int(get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item())
-        n_coarse_cycles = int(co.get_n_coarse_cycles(
+        n_cycles = get_n_cycles_three_layers(state_list, self.layer_list)[0, 0, 0].item()
+        n_coarse_cycles = co.get_n_coarse_cycles(
             state_list, coarse_state_collections, self.layer_list, self.coarse_layer_collections
-        )[0][0][0, 0, 0].item())
+        )[0][0][0, 0, 0].item()
         n_cycles_pair = torch.tensor([n_cycles, n_coarse_cycles], dtype=torch.float)
         perturbation_kernel = torch.distributions.multivariate_normal.MultivariateNormal(
             n_cycles_pair, covariance_matrix=self.params['Sigma']
@@ -198,7 +201,8 @@ class ToyCoarsePerturbation(CyclesPerturbation):
             )
         )
         on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
-        return on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        log_prob_cycles_perturbation = on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        return log_prob_cycles_perturbation
 
     def get_discrete_log_prob_cycles_perturbation(self, state_list, coarse_state_collections):
         self._validate_state(state_list, coarse_state_collections)
@@ -209,7 +213,9 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         n_cycles_pair = (n_cycles, n_coarse_cycles)
         null_prob = self.null_distribution_dict.get(n_cycles_pair, torch.tensor(1e-10))
         perturbed_prob = self.perturbed_distribution_dict[n_cycles_pair]
-        return torch.log(perturbed_prob) - torch.log(null_prob)
+        on_prob = torch.sum(lo.normalize_state(state_list[0])[0, 0, 0, 1:])
+        log_prob_cycles_perturbation = on_prob * (torch.log(perturbed_prob) - torch.log(null_prob))
+        return log_prob_cycles_perturbation
 
     def _validate_state(self, state_list, coarse_state_collections):
         for state in state_list:

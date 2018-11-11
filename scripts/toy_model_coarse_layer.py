@@ -152,7 +152,7 @@ def run(n_layers, d_image, kernel_size_list, thickness, length, n_rotations, n_p
     ind = torch.nonzero(state_list[0] > torch.max(state_list[0]) - 1)
     expanded_templates = cycles_machine.layer_list[0].expanded_templates.to_dense()
     print('Final log_prob: {}'.format(cycles_machine.get_energy(state_list, coarse_state_collections)))
-    print('Optimal log_prob: {}'.format(optimal_log_prob))
+    print('Optimal log_prob: {}'.format(cycles_machine.get_energy(optimal_state_list, optimal_coarse_state_collections)))
 
 
 ex.run()

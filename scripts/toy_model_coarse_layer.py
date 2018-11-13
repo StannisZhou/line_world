@@ -56,7 +56,7 @@ def run(n_layers, d_image, kernel_size_list, thickness, length, n_rotations, n_p
     }
 
     # Initialize the CyclesMachine
-    n_samples = int(1e4)
+    n_samples = int(5e4)
     self_rooting_prob_list = np.array([0.1, 0.01, 0.01])
     layer_params_list = generate_cycles_machine_layer_params(
         n_layers, n_channels_list, d_image, kernel_size_list, stride_list, self_rooting_prob_list,

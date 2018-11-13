@@ -92,22 +92,22 @@ class CyclesMachine(Component):
 
     def draw_sample_rejection_sampling(self):
         print('Drawing sample using rejection sampling')
-        with tqdm() as pbar:
-            while True:
-                layer_sample_list, coarse_sample_collections = self.draw_sample_markov_backbone()
-                perturbation = torch.exp(
-                    self.cycles_perturbation.get_discrete_log_prob_cycles_perturbation(
-                        layer_sample_list, coarse_sample_collections
-                    )
+        while True:
+            layer_sample_list, coarse_sample_collections = self.draw_sample_markov_backbone()
+            perturbation = torch.exp(
+                self.cycles_perturbation.get_discrete_log_prob_cycles_perturbation(
+                    layer_sample_list, coarse_sample_collections
                 )
-                acceptance_prob = perturbation / self.cycles_perturbation.perturbation_upperbound
-                if acceptance_prob > 1:
-                    acceptance_prob = torch.tensor(1)
+            )
+            acceptance_prob = perturbation / self.cycles_perturbation.perturbation_upperbound
+            if acceptance_prob > 1:
+                acceptance_prob = torch.tensor(1)
 
-                if torch.bernoulli(acceptance_prob):
-                    break
-
-                pbar.update()
+            if torch.bernoulli(acceptance_prob):
+                print('Probability: {}, accept'.format(acceptance_prob))
+                break
+            else:
+                print('Probability: {}, reject'.format(acceptance_prob))
 
         return layer_sample_list, coarse_sample_collections
 

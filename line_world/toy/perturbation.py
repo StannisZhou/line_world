@@ -252,13 +252,17 @@ class ToyCoarsePerturbation(CyclesPerturbation):
         perturbed_distribution_fine = self.params['perturbed_distribution_fine']
         perturbed_distribution_coarse = self.params['perturbed_distribution_coarse']
         perturbed_distribution_dict = {}
-        perturbation_upperbound = 0
         for ii in range(len(perturbed_distribution_fine)):
             for jj in range(len(perturbed_distribution_coarse)):
-                prob = perturbed_distribution_fine[ii] * perturbed_distribution_coarse[ii]
-                if prob > perturbation_upperbound:
-                    perturbation_upperbound = prob
-                perturbed_distribution_dict[(ii, jj)] = prob
+                perturbed_distribution_dict[(ii, jj)] = \
+                    perturbed_distribution_fine[ii] * perturbed_distribution_coarse[ii]
+
+        perturbation_upperbound = 0
+        for key in self.null_distribution_dict:
+            if key in perturbed_distribution_dict:
+                perturbation = perturbed_distribution_dict[key] / self.null_distribution_dict[key]
+                if perturbation > perturbation_upperbound:
+                    perturbation_upperbound = perturbation
 
         perturbed_distribution_points = torch.tensor(
             list(perturbed_distribution_dict.keys()), dtype=torch.float
